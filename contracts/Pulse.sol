@@ -1,27 +1,3 @@
-
-/**
- *Submitted for verification at BscScan.com on 2021-03-01
-*/
-
-/**
- *Submitted for verification at BscScan.com on 2021-03-01
-*/
-
-/**
-  
-   #BEE
-   
-   #LIQ+#RFI+#SHIB+#DOGE = #BEE
-
-   #SAFEMOON features:
-   3% fee auto add to the liquidity pool to locked forever when selling
-   2% fee auto distribute to all holders
-   I created a black hole so #Bee token will deflate itself in supply with every transaction
-   50% Supply is burned at start.
-   
-
- */
-
 pragma solidity ^0.6.12;
 // SPDX-License-Identifier: Unlicensed
 
@@ -39,9 +15,11 @@ import "./uniswap/core/IUniswapV2Pair.sol";
 import "./uniswap/periphery/IUniswapV2Router01.sol";
 import "./uniswap/periphery/IUniswapV2Router02.sol";
 
+import "hardhat/console.sol";
 
 
-contract SafeMoon is Context, IERC20, Ownable {
+
+contract Pulse is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
@@ -55,12 +33,13 @@ contract SafeMoon is Context, IERC20, Ownable {
     address[] private _excluded;
    
     uint256 private constant MAX = ~uint256(0);
-    uint256 private _tTotal = 1000000000 * 10**6 * 10**9;
+    uint256 private _tTotal = 1000000000 * 10**9;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
+    uint256 private _mintedTokensTotal = 0;
 
-    string private _name = "SafeMoon";
-    string private _symbol = "SAFEMOON";
+    string private _name = "Pulse"; 
+    string private _symbol = "PULSE";
     uint8 private _decimals = 9;
     
     uint256 public _taxFee = 5;
@@ -75,8 +54,23 @@ contract SafeMoon is Context, IERC20, Ownable {
     bool inSwapAndLiquify;
     bool public swapAndLiquifyEnabled = true;
     
-    uint256 public _maxTxAmount = 5000000 * 10**6 * 10**9;
-    uint256 private numTokensSellToAddToLiquidity = 500000 * 10**6 * 10**9;
+    uint256 public _maxTxAmount = 5000000 * 10**9;
+    uint256 private numTokensSellToAddToLiquidity = 500000 * 10**9;
+
+    uint256 tokenPrice = 20;
+    uint256 publicSaleMintedTokens = 0;
+    bool publicSalePaused = true;
+    bool shouldTransfer = false;
+
+    uint256 creationTime;
+    uint8 periodicMintStage = 1;
+
+    IERC20 public immutable bnbToken;
+
+    modifier isTransfer {
+        require(shouldTransfer, "Public sale: Transactions are stopped until the end of public sale");
+        _;
+    }
     
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled);
@@ -85,6 +79,7 @@ contract SafeMoon is Context, IERC20, Ownable {
         uint256 ethReceived,
         uint256 tokensIntoLiqudity
     );
+    event Mint(address to, uint256 amount);
     
     modifier lockTheSwap {
         inSwapAndLiquify = true;
@@ -92,22 +87,22 @@ contract SafeMoon is Context, IERC20, Ownable {
         inSwapAndLiquify = false;
     }
     
-    constructor () public {
-        _rOwned[_msgSender()] = _rTotal;
-        
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
+    constructor (address _bnbTokenAddress) public {        
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        IERC20 _bnbToken = IERC20(_bnbTokenAddress);
          // Create a uniswap pair for this new token
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
             .createPair(address(this), _uniswapV2Router.WETH());
 
         // set the rest of the contract variables
         uniswapV2Router = _uniswapV2Router;
+        bnbToken = _bnbToken;
         
         //exclude owner and this contract from fee
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         
-        emit Transfer(address(0), _msgSender(), _tTotal);
+        creationTime = block.timestamp;
     }
 
     function name() public view returns (string memory) {
@@ -131,7 +126,7 @@ contract SafeMoon is Context, IERC20, Ownable {
         return tokenFromReflection(_rOwned[account]);
     }
 
-    function transfer(address recipient, uint256 amount) public override returns (bool) {
+    function transfer(address recipient, uint256 amount) public override isTransfer returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
@@ -145,7 +140,7 @@ contract SafeMoon is Context, IERC20, Ownable {
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) public override isTransfer returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
@@ -206,7 +201,7 @@ contract SafeMoon is Context, IERC20, Ownable {
     }
 
     function includeInReward(address account) external onlyOwner() {
-        require(_isExcluded[account], "Account is already excluded");
+        require(_isExcluded[account], "Account is already included");
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
@@ -394,6 +389,83 @@ contract SafeMoon is Context, IERC20, Ownable {
         _tokenTransfer(from,to,amount,takeFee);
     }
 
+    function _percentageToAmountMintedToken(uint256 percentage) public view returns(uint256){
+        uint256 amount = _tTotal.div(100);
+        amount = amount.mul(percentage);
+        return amount;
+    }
+
+    function _mint (
+        address to,
+        uint256 amount
+    ) private {
+        require(to != address(0), "Mint: mint to the zero address.");
+        require(amount > 0, "Mint: mint amount must be greater than zero.");
+        // if(to != owner()){
+        //     require(amount <= _maxTxAmount, "Mint amount exceeds the maxTxAmount.");
+        // }
+        if(_isExcluded[to]){
+           _tOwned[to] = _tOwned[to].add(amount);
+           _rOwned[to] = _rOwned[to].add(amount); 
+        }
+        else{
+            _rOwned[to] = _rOwned[to].add(amount);
+        }
+        _mintedTokensTotal = _mintedTokensTotal.add(amount);
+        emit Mint(to, amount);
+    }
+
+    function mintHalfByOwner(address to) public onlyOwner() isTransfer {
+        require(_mintedTokensTotal <= _percentageToAmountMintedToken(50), "Mint: you can mint 50% of the tokens only one time!");
+        _mint(to, _percentageToAmountMintedToken(50));
+    }
+
+    function resumeTransactions() public onlyOwner() {
+        shouldTransfer = true;
+    }
+
+    function initPublicSale() public onlyOwner() {
+        publicSalePaused = false;
+    }
+
+    function pausePublicSale() public onlyOwner() {
+        publicSalePaused = true;
+    }
+
+    function publicSale(uint256 amount) public {
+        uint256 maxMintablePs = _percentageToAmountMintedToken(10);
+        require(publicSalePaused == false, 
+            "Public sale: public sale is paused or it has stopped");
+        require(publicSaleMintedTokens + amount <= maxMintablePs,
+            "Public sale: you need to buy less Pulse");
+        require(bnbToken.allowance(_msgSender(), address(this)) > amount.mul(tokenPrice), "Public sale: you don't have enough founds.");
+        bnbToken.transferFrom(_msgSender(), address(this), amount.mul(tokenPrice));
+        _mint(_msgSender(), amount);
+    }
+
+    function periodicMint() public {
+        require(periodicMintStage < 4, 
+            "Periodic mint: all of the periodic mint stages have been completed");
+        uint256 month = 1 years;
+        month = month.div(12);
+        if(creationTime + month.mul(12) >= block.timestamp && peridoicMintStage == 1) {
+            
+            periodicMintStage = periodicMintStage.add(1);
+        }
+        else if(creationTime + month.mul(18) >= block.timestamp && peridoicMintStage == 2) {
+
+            periodicMintStage = periodicMintStage.add(1);
+        }
+        else if(creationTime + month.mul(24) >= block.timestamp && peridoicMintStage == 3) {
+            
+            periodicMintStage = periodicMintStage.add(1);
+        }
+    }
+
+    function getMintedTokensTotal() public view returns(uint256){
+        return _mintedTokensTotal;
+    }
+
     function swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
         // split the contract balance into halves
         uint256 half = contractTokenBalance.div(2);
@@ -499,8 +571,4 @@ contract SafeMoon is Context, IERC20, Ownable {
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
-
-
-    
-
 }
