@@ -24,7 +24,13 @@ module.exports = {
         url: "https://eth-mainnet.alchemyapi.io/v2/aRkagCDnGAaBxWtS1c-p7JJqUMysSBfw",
         blockNumber: 12651413
       }
-    }
+    },
+    testnet: {
+      url: "https://data-seed-prebsc-1-s1.binance.org:8545",
+      chainId: 97,
+      gasPrice: 20000000000,
+      accounts: {mnemonic: mnemonic}
+    },
   }
 };
 

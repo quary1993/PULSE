@@ -36,7 +36,6 @@ contract Pulse is Context, IERC20, Ownable {
     uint256 private _tTotal = 1000000000 * 10**9;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
-    uint256 private _mintedTokensTotal = 0;
 
     string private _name = "Pulse"; 
     string private _symbol = "PULSE";
@@ -57,8 +56,10 @@ contract Pulse is Context, IERC20, Ownable {
     uint256 public _maxTxAmount = 5000000 * 10**9;
     uint256 private numTokensSellToAddToLiquidity = 500000 * 10**9;
 
-    uint256 tokenPrice = 20;
+    uint256 tokenPrice = 20 * 10 ** 9;
     uint256 publicSaleMintedTokens = 0;
+    bool hasOwnerMintedHalf = false;
+    uint256 periodicMintedTokens = 0;
     bool publicSalePaused = true;
     bool shouldTransfer = false;
 
@@ -87,7 +88,7 @@ contract Pulse is Context, IERC20, Ownable {
         inSwapAndLiquify = false;
     }
     
-    constructor (address _bnbTokenAddress) public {        
+    constructor (address _bnbTokenAddress, uint256 _tokenPrice) public {        
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         IERC20 _bnbToken = IERC20(_bnbTokenAddress);
          // Create a uniswap pair for this new token
@@ -97,6 +98,7 @@ contract Pulse is Context, IERC20, Ownable {
         // set the rest of the contract variables
         uniswapV2Router = _uniswapV2Router;
         bnbToken = _bnbToken;
+        tokenPrice = _tokenPrice * 10**9;
         
         //exclude owner and this contract from fee
         _isExcludedFromFee[owner()] = true;
@@ -416,8 +418,9 @@ contract Pulse is Context, IERC20, Ownable {
     }
 
     function mintHalfByOwner(address to) public onlyOwner() isTransfer {
-        require(_mintedTokensTotal <= _percentageToAmountMintedToken(50), "Mint: you can mint 50% of the tokens only one time!");
+        require(hasOwnerMintedHalf == false, "Mint: you can mint 50% of the tokens only one time!");
         _mint(to, _percentageToAmountMintedToken(50));
+        hasOwnerMintedHalf = true;
     }
 
     function resumeTransactions() public onlyOwner() {
@@ -432,33 +435,37 @@ contract Pulse is Context, IERC20, Ownable {
         publicSalePaused = true;
     }
 
-    function publicSale(uint256 amount) public {
+    function publicSale() public {
+        uint256 bnb = msg.value;
+        uint256 pulseToBeBought = bnb.div(tokenPrice);
         uint256 maxMintablePs = _percentageToAmountMintedToken(10);
         require(publicSalePaused == false, 
             "Public sale: public sale is paused or it has stopped");
         require(publicSaleMintedTokens + amount <= maxMintablePs,
             "Public sale: you need to buy less Pulse");
-        require(bnbToken.allowance(_msgSender(), address(this)) > amount.mul(tokenPrice), "Public sale: you don't have enough founds.");
-        bnbToken.transferFrom(_msgSender(), address(this), amount.mul(tokenPrice));
-        _mint(_msgSender(), amount);
+        _mint(_msgSender(), pulseToBeBought);
+        publicSaleMintedTokens = publicSaleMintedTokens.add(pulseToBeBought);
     }
 
-    function periodicMint() public {
-        require(periodicMintStage < 4, 
-            "Periodic mint: all of the periodic mint stages have been completed");
+    function periodicMint(uint256 percentage) public {
+        require(percentage > 0, 
+            "Periodic mint: percentage to be minted should be greater than 0");
+        
         uint256 month = 1 years;
         month = month.div(12);
-        if(creationTime + month.mul(12) >= block.timestamp && peridoicMintStage == 1) {
-            
-            periodicMintStage = periodicMintStage.add(1);
-        }
-        else if(creationTime + month.mul(18) >= block.timestamp && peridoicMintStage == 2) {
+        if(creationTime + month.mul(6) >= block.timestamp){
 
-            periodicMintStage = periodicMintStage.add(1);
+        }
+        else if(creationTime + month.mul(12) >= block.timestamp) {
+            
+        }
+        else if(creationTime + month.mul(18) >= block.timestamp) {
+
+            
         }
         else if(creationTime + month.mul(24) >= block.timestamp && peridoicMintStage == 3) {
             
-            periodicMintStage = periodicMintStage.add(1);
+            
         }
     }
 
