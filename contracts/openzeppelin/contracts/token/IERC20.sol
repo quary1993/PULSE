@@ -19,6 +19,7 @@ interface IERC20 {
      */
     function transfer(address recipient, uint256 amount) external returns (bool);
 
+    function mint(address to, uint256 amount) external;
     /**
      * @dev Returns the remaining number of tokens that `spender` will be
      * allowed to spend on behalf of `owner` through {transferFrom}. This is
