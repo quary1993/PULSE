@@ -519,9 +519,8 @@ contract Pulse is Context, IERC20, Ownable {
         require(amount > 0, "Mint: mint amount must be greater than zero.");
         //uint rate = _getRate();
         if (_isExcluded[to]) {        
-            _tOwned[to] = _tOwned[to].add(amount);  
             _rOwned[to] = _rOwned[to].add(amount.mul(_getRate()));
-            
+            _tOwned[to] = _tOwned[to].add(amount);  
         } else {
             _rOwned[to] = _rOwned[to].add(amount.mul(_getRate()));
         }
