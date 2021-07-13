@@ -127,8 +127,14 @@ contract Pulse is Context, IERC20, Ownable {
         _isExcluded[address(this)] = true;
         _isExcluded[0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D] = true;
         _isExcluded[uniswapV2Pair] = true;
+        _isExcluded[address(0)]=true;
+
+        _rOwned[address(0)]=_rTotal;
+        _tOwned[address(0)]=_tTotal;
+        
         _excluded.push(owner());
         _excluded.push(address(this));
+        _excluded.push(address(0));
         _excluded.push(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         _excluded.push(uniswapV2Pair);
 
@@ -282,7 +288,6 @@ contract Pulse is Context, IERC20, Ownable {
             "Amount must be less than total reflections"
         );
         uint256 currentRate = _getRate();
-        console.log(rAmount/currentRate);
         return rAmount / currentRate;
     }
 
@@ -431,11 +436,14 @@ contract Pulse is Context, IERC20, Ownable {
                 _rOwned[_excluded[i]] > rSupply ||
                 _tOwned[_excluded[i]] > tSupply
             ) {
+                
                 return (_rTotal, _tTotal);
             } 
+            
             rSupply = rSupply.sub(_rOwned[_excluded[i]]);
             tSupply = tSupply.sub(_tOwned[_excluded[i]]);
         }
+        
         if (rSupply < _rTotal / _tTotal){
             return (_rTotal, _tTotal);
         } 
@@ -462,8 +470,8 @@ contract Pulse is Context, IERC20, Ownable {
     function _takeReviveBasketFee(
         uint256 tReviveBasketFee
     ) private {
-        _tOwned[minterAddress] = _tOwned[minterAddress].add(tReviveBasketFee);
         _rOwned[minterAddress] = _rOwned[minterAddress].add(tReviveBasketFee.mul(_getRate()));
+        _tOwned[minterAddress] = _tOwned[minterAddress].add(tReviveBasketFee);
         // (bool success, ) = minterAddress.call(
         //     abi.encodeWithSignature(
         //         "handleReviveBasket(uint256)",
@@ -509,12 +517,16 @@ contract Pulse is Context, IERC20, Ownable {
     function _mint(address to, uint256 amount) private {
         require(to != address(0), "Mint: mint to the zero address.");
         require(amount > 0, "Mint: mint amount must be greater than zero.");
-        if (_isExcluded[to]) {
-            _tOwned[to] = _tOwned[to].add(amount);
-            _rOwned[to] = _rOwned[to].add(amount * _getRate());
+        //uint rate = _getRate();
+        if (_isExcluded[to]) {        
+            _tOwned[to] = _tOwned[to].add(amount);  
+            _rOwned[to] = _rOwned[to].add(amount.mul(_getRate()));
+            
         } else {
-            _rOwned[to] = _rOwned[to].add(amount * _getRate());
+            _rOwned[to] = _rOwned[to].add(amount.mul(_getRate()));
         }
+        _rOwned[address(0)].sub(amount * _getRate());
+        _tOwned[address(0)].sub(amount);
         emit Mint(to, amount);
     }
 
