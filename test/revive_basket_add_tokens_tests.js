@@ -27,7 +27,12 @@
 //         await minter.addToken(pulse.address, 230);
 //         expect(await minter._getTokenWeight(pulse.address)).to.equal('230');
 //         await minter.removeToken(pulse.address);
-//         expect(await minter._getTokenWeight(pulse.address)).to.equal('0');
 //     });
+
+//     it("Should remove a token from the revive basket tokens array", async function () {
+//         await minter.addToken(pulse.address, 230);
+//         await minter.removeToken(pulse.address);
+//         expect(await minter._getTokenWeight(pulse.address)).to.equal('0');
+//     })
 
 // })

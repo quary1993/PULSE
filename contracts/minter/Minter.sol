@@ -1,23 +1,31 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.6.12;
+import "./IMinter.sol";
+import "../openzeppelin/contracts/token/IToken.sol";
 import "../openzeppelin/contracts/libraries/Ownable.sol";
 import "../openzeppelin/contracts/libraries/SafeMath.sol";
 import "../openzeppelin/contracts/token/IERC20.sol";
 import "../uniswap/periphery/IUniswapV2Router02.sol";
+import "../uniswap/core/IUniswapV2Factory.sol";
+import "../uniswap/core/IUniswapV2Pair.sol";
 import "hardhat/console.sol";
 
-contract Minter is Ownable {
+contract Minter is IMinter, Ownable {
     using SafeMath for uint256;
 
     uint256 private creationTime = 0;
-    bool private publicSalePaused = true;
-    bool private hasOwnerMintedHalf = false;
-    uint256 private publicSaleMintedTokens = 0;
-    uint256 private periodicMintedTokens = 0;
     uint256 private tokenPrice = 1;
+
+    bool private publicSalePaused = true;
+    uint256 private publicSaleMintedTokens = 0;
+
+    bool private hasOwnerMintedHalf = false;
+    uint256 private periodicMintedTokens = 0;
+
     address private pulseTokenAddress;
     IERC20 private pulseToken = IERC20(0x00);
     IUniswapV2Router02 private uniswapV2Router;
+    IUniswapV2Factory private factory;
 
     struct reviveBasketToken {
         address tokenAddress;
@@ -32,23 +40,21 @@ contract Minter is Ownable {
         uniswapV2Router = IUniswapV2Router02(
             0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
         );
+        factory = IUniswapV2Factory(uniswapV2Router.factory());
     }
 
     //used to set the address of the token which has the _mint function
-    //params: _tokenAddress (address) - the address of the token which has the _mint function
     function setTokenAddress(address _tokenAddress) external {
         pulseToken = IERC20(_tokenAddress);
         pulseTokenAddress = _tokenAddress;
     }
 
     //used to set the price of the token which has the _mint function
-    //params: _tokenPrice (uint256) - the price (with 18 decimals) of the token which has the _mint function
     function setTokenPrice(uint256 _tokenPrice) external {
         tokenPrice = _tokenPrice;
     }
 
     //converts percentage to amount from 1000000000
-    //params: percentage (uint256) - the percentage that needs to be converted
     function _percentageToAmountMintedToken(uint256 percentage)
         private
         pure
@@ -60,7 +66,6 @@ contract Minter is Ownable {
     }
 
     //used to mint half of the total tokens to the owner
-    //params: to (address) - the address which will hold resulting tokens
     function mintHalfByOwner(address to) external onlyOwner() {
         require(
             hasOwnerMintedHalf == false,
@@ -81,9 +86,6 @@ contract Minter is Ownable {
     }
 
     //used to buy tokens with eth
-    //params: msg.value - the amount of eth used to buy tokens
-    //req: - public sale should not be on pause
-    //     - the amount minted by public sale cannot exceed 10% of the amount of mintable tokens
     function publicSale() external payable {
         uint256 bnb = msg.value;
         uint256 pulseToBeBought = bnb.mul(10**9) / tokenPrice;
@@ -103,7 +105,6 @@ contract Minter is Ownable {
     //used to redeem a specific amount of tokens after a period of months established below
     //if the max mintable amount of tokens is not claimed at the specified time, the remaining
     //amount will be able to the next reward so the owner does not need to claim all the tokens in one trance
-    //params: amountToBeMinted (uint256) - the amount the owner wants to mint
     function periodicMint(uint256 amountToBeMinted) external onlyOwner() {
         require(
             amountToBeMinted > 0,
@@ -194,7 +195,7 @@ contract Minter is Ownable {
         }
     }
 
-    function _getTokenWeight(address _tokenAddress)
+    function getTokenWeight(address _tokenAddress)
         public
         view
         returns (uint256)
@@ -207,33 +208,39 @@ contract Minter is Ownable {
         return 0;
     }
 
-    function _getAmountToBeBought(uint256 totalBalance, uint256 tokenWeight)
+    //returns the amount of eth that can be used to buy a specific token based
+    // on the total eth amount (totalBalance) and the token's weight 
+    function _getEthAmountToBeUsed(uint256 totalBalance, address tokenAddress, uint256 tokenWeight)
         private
         view
         returns (uint256)
     {
-        return
-            (totalBalance / 100).mul(tokenWeight.mul(100)) / reviveBasketWeight;
+        uint256 amount = (totalBalance / 100).mul(tokenWeight.mul(100)) / reviveBasketWeight;
+        return amount;
     }
 
-    function _swapExactTokensForEth(uint256 tokenAmount)
+    //used to swap "_tokenAmount" of tokens of the specified token (_tokenAddress)
+    // into eth and returns the resulted amount
+    function _swapExactTokensForEth(uint256 _tokenAmount, address _tokenAddress)
         private
         returns (uint256)
     {
         uint256 initialBalance = address(this).balance;
 
-        pulseToken.approve(
+        IERC20 tokenContract = IERC20(_tokenAddress);
+
+        tokenContract.approve(
             0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
-            tokenAmount
+            _tokenAmount
         );
 
         // generate the uniswap pair path of token -> BNB
         address[] memory path = new address[](2);
-        path[0] = address(this);
+        path[0] = _tokenAddress;
         path[1] = uniswapV2Router.WETH();
 
         uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            tokenAmount,
+            _tokenAmount,
             0, // accept any amount of ETH
             path,
             address(this),
@@ -243,36 +250,41 @@ contract Minter is Ownable {
         return address(this).balance.sub(initialBalance);
     }
 
+    //swap half of the "ethAmount" into the specified token and add liquidity to the WETH -> token
+    //pool with the remaining half of the "ethAmount"
     function _buyToken(reviveBasketToken memory token, uint256 ethAmount)
         private
     {
         IERC20 tokenContract = IERC20(token.tokenAddress);
 
-        // generate the uniswap pair path of token -> BNB
+        // generate the uniswap pair path of WETH -> token
         address[] memory path = new address[](2);
         path[0] = uniswapV2Router.WETH();
         path[1] = token.tokenAddress;
 
-        uint256[] memory amountsOut = uniswapV2Router.getAmountsOut(
-            ethAmount / 2,
-            path
-        );
+        //get pair address of the WETH -> token pair
+        address pairAddress = factory.getPair(uniswapV2Router.WETH(), token.tokenAddress);
 
-        //return aici
-        require(amountsOut[1] > 0, "Revive Basket: insufficient liquidity");
+        //if pair don't exist
+        if(pairAddress == address(0)) return;
 
+        // capture the contract's current "token" balance.
+        // this is so that we can capture exactly the amount of "token" that the
+        // swap creates, and not make the liquidity event include any "token" that
+        // has been manually sent to the contract
         uint256 tokenAmount = tokenContract.balanceOf(address(this));
         uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: ethAmount / 2
         }(0, path, address(this), block.timestamp + 7 days);
-        tokenAmount = tokenContract.balanceOf(address(this)).sub(tokenAmount);
 
+        // how much "token" did we just swap into?
+        tokenAmount = tokenContract.balanceOf(address(this)).sub(tokenAmount);
         tokenContract.approve(
             0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
             tokenAmount
         );
-
-        uniswapV2Router.addLiquidityETH{value: ethAmount / 2}(
+       //adds liquidity to the WETH -> token
+       uniswapV2Router.addLiquidityETH{value: ethAmount / 2}(
             token.tokenAddress,
             tokenAmount,
             0,
@@ -283,85 +295,134 @@ contract Minter is Ownable {
     }
 
     function handleReviveBasket(uint256 pulseAmount)
-        external
-        onlyOwner
+        public
+        override
         returns (bool)
     {
-        uint256 ethAmount = _swapExactTokensForEth(pulseAmount);
+        //swap all the received PULSE into eth
+        uint256 ethAmount = _swapExactTokensForEth(pulseAmount, pulseTokenAddress);
         for (uint256 i = 0; i < reviveBasketTokens.length; i++) {
             _buyToken(
                 reviveBasketTokens[i],
-                _getAmountToBeBought(ethAmount, reviveBasketTokens[i].weight)
+                _getEthAmountToBeUsed(ethAmount, reviveBasketTokens[i].tokenAddress, reviveBasketTokens[i].weight)
             );
         }
         return true;
     }
 
-    function convertTokenLpsIntoEth(address _tokenAddress)
+    function _convertTokenLpsIntoEth(address _tokenAddress, uint256 _lpTokens)
         private
         returns (uint256)
     {
-        IERC20 tokenContract = IERC20(_tokenAddress);
 
-        //approve the router to use all the LP's of this contract
-        tokenContract.approve(
+        address pairAddress = factory.getPair(uniswapV2Router.WETH(), _tokenAddress);
+
+        if(pairAddress == address(0)) return 0;
+
+        IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
+
+        IERC20 token = IERC20(_tokenAddress);
+
+        if(_lpTokens > pair.balanceOf(address(this))) {
+            return 0;
+        }
+
+        //approve the router to use all the lp's of this contract
+        pair.approve(
             0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
-            tokenContract.balanceOf(address(this))
+            _lpTokens
         );
 
-        //switch all the LP's into ETH and Pulse
+        //swap all the LP's into eth and PULSE
+        // capture the contract's current eth and PULSE.
+        // this is so that we can capture exactly the amount of eth that the
+        // swap creates, and not make the liquidity event include any eth and pulse that
+        // has been manually sent to the contract
         uint256 amountEth = address(this).balance;
-        uint256 amountToken = tokenContract.balanceOf(address(this));
+        uint256 amountToken = token.balanceOf(address(this));
+
         uniswapV2Router.removeLiquidityETHSupportingFeeOnTransferTokens(
-            address(this),
-            tokenContract.balanceOf(address(this)),
+            _tokenAddress,
+            _lpTokens,
             0,
             0,
             address(this),
             block.timestamp + 7 days
         );
-        amountToken = tokenContract.balanceOf(address(this)).sub(amountToken);
+        // how much PULSE did we just swap into?
+        amountToken = token.balanceOf(address(this)).sub(amountToken);
 
-        //generate the uniswap pair path of WETH -> PULSE
-        address[] memory path = new address[](2);
-        path[0] = _tokenAddress;
-        path[1] = uniswapV2Router.WETH();
+        //swap the obtained PULSE tokens into eth
+        _swapExactTokensForEth(amountToken, _tokenAddress);
 
-        //converts all of the eth into PULSE tokens and transfers them to the owner
-        uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            amountToken,
-            0,
-            path,
-            address(this),
-            block.timestamp + 7 days
-        );
-
+        // how much ETH did we just swap into?
         amountEth = address(this).balance.sub(amountEth);
         return amountEth;
     }
 
-    function redeemLpTokens(address _tokenAddress) external onlyOwner {
-        uint256 amountEth = convertTokenLpsIntoEth(_tokenAddress);
+    //used to swap "_lpTokens" amount of 
+    function redeemLpTokens(address _tokenAddress, uint256 _lpTokens) external onlyOwner {
+        address pairAddress = factory.getPair(uniswapV2Router.WETH(), _tokenAddress);
+        if(pairAddress == address(0)) return;
+        IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
+        require(pair.balanceOf(address(this)) >= _lpTokens, "Revive Basket: you don't have enough founds");
+        
+        uint256 amountEth = _convertTokenLpsIntoEth(_tokenAddress, _lpTokens);
 
         //generate the uniswap pair path of WETH -> PULSE
         address[] memory path = new address[](2);
-        path[0] = _tokenAddress;
-        path[1] = uniswapV2Router.WETH();
+        path[0] = uniswapV2Router.WETH();
+        path[1] = pulseTokenAddress;
 
         uint256 balance = pulseToken.balanceOf(address(this));
-
+        
         uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: amountEth
         }(0, path, address(this), block.timestamp + 7 days);
 
         balance = pulseToken.balanceOf(address(this)).sub(balance);
+        IToken token = IToken(pulseTokenAddress);
+        token.deliver(balance);
+    }
 
-        (bool success, ) = pulseTokenAddress.call(
-            abi.encodeWithSignature("deliver(uint256)", balance)
+    function reedemLpTokensPulse() external onlyOwner override returns(uint256) {
+
+        address ethPulsePairAddress = factory.getPair(uniswapV2Router.WETH(), pulseTokenAddress);
+
+        //get contract interafce of the uniswapV2PairToken
+        IUniswapV2Pair ethPulsePairContract = IUniswapV2Pair(ethPulsePairAddress);
+
+        //approve the router to use all the LP's of this contract
+        ethPulsePairContract.approve(
+            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
+            ethPulsePairContract.balanceOf(address(this))
         );
-        require(
-            success,
-            "Revive Baksed: an error ocurred when delivering the obtained PULSE"
+
+        //swap all the LP's into ETH and Pulse
+        uint256 amountEth;
+        uint256 amountPulse = pulseToken.balanceOf(address(this));
+        amountEth = uniswapV2Router
+        .removeLiquidityETHSupportingFeeOnTransferTokens(
+            address(this),
+            ethPulsePairContract.balanceOf(address(this)),
+            0,
+            0,
+            address(this),
+            block.timestamp + 7 days
         );
+
+        //generate the uniswap pair path of WETH -> PULSE
+        address[] memory path = new address[](2);
+        path[0] = uniswapV2Router.WETH();
+        path[1] = address(this);
+
+        //converts all of the eth into PULSE tokens and transfers them to the owner
+        uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
+            value: amountEth
+        }(1, path, address(this), block.timestamp + 7 days);
+
+        // how much ETH did we just swap into?
+        amountPulse = pulseToken.balanceOf(address(this)).sub(amountPulse);  
+        return amountPulse; 
     }
 }

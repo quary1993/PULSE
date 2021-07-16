@@ -2,6 +2,7 @@ pragma solidity ^0.6.12;
 // SPDX-License-Identifier: Unlicensed
 
 //openzeppelin contracts
+import "./openzeppelin/contracts/token/IToken.sol";
 import "./openzeppelin/contracts/token/IERC20.sol";
 import "./openzeppelin/contracts/libraries/SafeMath.sol";
 import "./openzeppelin/contracts/libraries/Ownable.sol";
@@ -12,9 +13,41 @@ import "./uniswap/core/IUniswapV2Pair.sol";
 import "./uniswap/periphery/IUniswapV2Router01.sol";
 import "./uniswap/periphery/IUniswapV2Router02.sol";
 
+//hardhat contracts
 import "hardhat/console.sol";
 
-contract Pulse is Context, IERC20, Ownable {
+//minter contract
+import "./minter/IMinter.sol";
+
+
+//    #PULSE features:
+//    5% Revive Basket: 
+//    The owner will be able to define an arbitrary number of tokens, each with a corresponding weight. 
+//    Each time a transfer is done, the 5% commission that is meant for the Revive basket will be used to buy these tokens 
+//    from Pancake Swap according to their corresponding weight. After the contract buys the revive basket tokens, it will hold
+//    the resulting LP. 
+
+// 	A function will be implemented, and callable by the owner, which will redeem a specific LP, sell the obtained tokens for BNB, 
+//     then use the BNB to acquire PULSE from Pancake Swap and distribute the resulting PULSE to all the PULSE holders proportional 
+//     to their holdings.
+
+//     2% Revive Launchdome:
+//     There will be a revive launchdome wallet, changeable by the owner, which will receive 2% of the transferred token.
+
+//     3% Pancake Swap Liquidity:
+//     2% of the transferred amount will be used to add liquidity to the BNB <> PULSE pair in pancake swap. In this process, 
+//     the contract will buy the proper amount of BNB (~equiv. with 1% of the transaction amount) and place them as liquidity in the 
+//     Pancake Swap Pair, together with the remaining amount of the allocated 2%. The resulting LP will be held by the contract.
+//     We will add a function which redeems the liquidity, sells the BNB for Pulse and burns the resulting pulse.
+
+
+//     1% Distribution:
+//     1% will be distributed among all the token holders
+
+ 
+
+
+contract Pulse is Ownable {
     using SafeMath for uint256;
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
@@ -32,6 +65,7 @@ contract Pulse is Context, IERC20, Ownable {
     string private _symbol = "PULSE";
     uint8 private _decimals = 9;
 
+    //declaring fee percentages 
     uint256 public _taxFee = 1;
     uint256 private _previousTaxFee = _taxFee;
 
@@ -48,23 +82,18 @@ contract Pulse is Context, IERC20, Ownable {
     IUniswapV2Router02 public immutable uniswapV2Router;
     address public uniswapV2Pair;
 
+    address public immutable minterAddress;
+
     bool inSwapAndLiquify;
     bool public swapAndLiquifyEnabled = true;
-
-    address public immutable minterAddress;
 
     uint256 public _maxTxAmount = 5000000 * 10**9;
     uint256 private numTokensSellToAddToLiquidity = 500000 * 10**9;
 
     uint256 tokenPrice = 20 * 10**18;
-    uint256 publicSaleMintedTokens = 0;
-    bool hasOwnerMintedHalf = false;
-    uint256 periodicMintedTokens = 0;
-    bool publicSalePaused = true;
     bool shouldTransfer = false;
 
     uint256 creationTime;
-    uint8 periodicMintStage = 1;
 
     struct Values {
         uint256 rAmount;
@@ -79,6 +108,7 @@ contract Pulse is Context, IERC20, Ownable {
         uint256 tReviveBasketFee;
     }
 
+    //used to block all transactions while public sale is taking place
     modifier isTransfer {
         require(
             shouldTransfer,
@@ -99,7 +129,10 @@ contract Pulse is Context, IERC20, Ownable {
         inSwapAndLiquify = false;
     }
 
+    //declaring events that are occuring in this contract
     event Mint(address to, uint256 amount);
+    event Approval(address owner, address spender, uint256 amount);
+    event Transfer(address sender, address recipient, uint256 amount);
     event SwapAndLiquifyEnabledUpdated(bool enabled);
     event SwapAndLiquify(
         uint256 tokensSwapped,
@@ -111,6 +144,7 @@ contract Pulse is Context, IERC20, Ownable {
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
             0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
         );
+
         // Create a uniswap pair for this new token
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
         .createPair(address(this), _uniswapV2Router.WETH());
@@ -155,10 +189,11 @@ contract Pulse is Context, IERC20, Ownable {
         return _decimals;
     }
 
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() public view returns (uint256) {
         return _tTotal;
     }
 
+    //sets how much ETH should PULSE cost (it should be an 18 decimals number)
     function setTokenPrice(uint256 _tokenPrice) public {
         tokenPrice = _tokenPrice;
     }
@@ -175,14 +210,13 @@ contract Pulse is Context, IERC20, Ownable {
         reviveLaunchDomeAddress = _reviveLaunchDomeAddress;
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) public view returns (uint256) {
         if (_isExcluded[account]) return _tOwned[account];
         return tokenFromReflection(_rOwned[account]);
     }
 
     function transfer(address recipient, uint256 amount)
         public
-        override
         isTransfer
         returns (bool)
     {
@@ -193,7 +227,6 @@ contract Pulse is Context, IERC20, Ownable {
     function allowance(address owner, address spender)
         public
         view
-        override
         returns (uint256)
     {
         return _allowances[owner][spender];
@@ -201,7 +234,6 @@ contract Pulse is Context, IERC20, Ownable {
 
     function approve(address spender, uint256 amount)
         public
-        override
         returns (bool)
     {
         _approve(_msgSender(), spender, amount);
@@ -212,7 +244,7 @@ contract Pulse is Context, IERC20, Ownable {
         address sender,
         address recipient,
         uint256 amount
-    ) public override isTransfer returns (bool) {
+    ) public isTransfer returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(
             sender,
@@ -252,7 +284,7 @@ contract Pulse is Context, IERC20, Ownable {
         return _tFeeTotal;
     }
 
-    function deliver(uint256 tAmount) public {
+    function deliver(uint256 tAmount) public  {
         address sender = _msgSender();
         require(
             !_isExcluded[sender],
@@ -396,7 +428,7 @@ contract Pulse is Context, IERC20, Ownable {
         uint256 currentRate
     )
         private
-        view
+        pure
         returns (
             uint256,
             uint256,
@@ -432,7 +464,7 @@ contract Pulse is Context, IERC20, Ownable {
         uint256 rSupply = _rTotal;
         uint256 tSupply = _tTotal;
         for (uint256 i = 0; i < _excluded.length; i++) {
-            if (
+            if ( 
                 _rOwned[_excluded[i]] > rSupply ||
                 _tOwned[_excluded[i]] > tSupply
             ) {
@@ -450,37 +482,48 @@ contract Pulse is Context, IERC20, Ownable {
         return (rSupply, tSupply);
     }
 
+    
+    // Used to deposit "tLiquidity" amount of Pulse in the balance of this contract where
+    // "tLiquidity" is "_liquidityFee" percentage of the amount that is being transfered 
+    
     function _takeLiquidity(uint256 tLiquidity) private {
         _rOwned[address(this)] = _rOwned[address(this)].add(tLiquidity.mul(_getRate()));
         if (_isExcluded[address(this)])
             _tOwned[address(this)] = _tOwned[address(this)].add(tLiquidity);
     }
 
+    
+    // Used to deposit "tReviveLaunchDomeFee" amount of Pulse in the balance of this contract where
+    // "tReviveLaunchDomeFee" is "_reviveLaunchDomeFee" percentage of the amount that is being transfered
+    
     function _takeReviveLaunchDomeFee(
         uint256 tReviveLaunchDomeFee
     ) private {
         _rOwned[reviveLaunchDomeAddress] = _rOwned[reviveLaunchDomeAddress].add(
             tReviveLaunchDomeFee.mul(_getRate())
         );
-        if (_isExcluded[reviveLaunchDomeAddress])
+        if (_isExcluded[reviveLaunchDomeAddress]) {
             _tOwned[reviveLaunchDomeAddress] = _tOwned[reviveLaunchDomeAddress]
             .add(tReviveLaunchDomeFee);
+        }
     }
 
+    // Used to deposit "tReviveBasketFee" amount of Pulse in the balance of this contract where
+    // "tReviveBasketFee" is "_reviveBasketFee" percentage of the amount that is being transfered 
+    // and revive basket functionality is called if "tReviveBasketFee" is greater than 0
+    
     function _takeReviveBasketFee(
         uint256 tReviveBasketFee
     ) private {
         _rOwned[minterAddress] = _rOwned[minterAddress].add(tReviveBasketFee.mul(_getRate()));
         _tOwned[minterAddress] = _tOwned[minterAddress].add(tReviveBasketFee);
-        // (bool success, ) = minterAddress.call(
-        //     abi.encodeWithSignature(
-        //         "handleReviveBasket(uint256)",
-        //         tReviveBasketFee
-        //     )
-        // );
-        // require(success, 'Revive basket error');
+        if(tReviveBasketFee > 0){
+        IMinter minter = IMinter(minterAddress);
+        minter.handleReviveBasket(tReviveBasketFee);
+        }
     }
 
+    //returns "_tax" percentage of "_amount"
     function calculateFee(uint256 _amount, uint256 _tax)
         private
         pure
@@ -489,6 +532,7 @@ contract Pulse is Context, IERC20, Ownable {
         return _amount.mul(_tax) / 10**2;
     }
 
+    //used to remove all the fees that are being charged when a transfer is taking place
     function removeAllFee() private {
         if (_taxFee == 0 && _liquidityFee == 0) return;
 
@@ -503,6 +547,7 @@ contract Pulse is Context, IERC20, Ownable {
         _reviveBasketFee = 0;
     }
 
+    //used to restore all the fees after a transfer that didn't charged any fee had occured
     function restoreAllFee() private {
         _taxFee = _previousTaxFee;
         _liquidityFee = _previousLiquidityFee;
@@ -510,7 +555,7 @@ contract Pulse is Context, IERC20, Ownable {
         _reviveBasketFee = _previousReviveBasketFee;
     }
 
-    function mint(address to, uint256 amount) external override onlyMinter {
+    function mint(address to, uint256 amount) external onlyMinter {
         _mint(to, amount);
     }
 
@@ -536,7 +581,6 @@ contract Pulse is Context, IERC20, Ownable {
     ) private {
         require(owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
-
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
@@ -557,7 +601,7 @@ contract Pulse is Context, IERC20, Ownable {
         // is the token balance of this contract address over the min number of
         // tokens that we need to initiate a swap + liquidity lock?
         // also, don't get caught in a circular liquidity event.
-        // also, don't swap & liquify if sender is uniswap pair.
+        // also, don't swap & liquify if sender and receiver is excluded.
         uint256 contractTokenBalance = balanceOf(address(this));
         if (contractTokenBalance >= _maxTxAmount) {
             contractTokenBalance = _maxTxAmount;
@@ -579,7 +623,7 @@ contract Pulse is Context, IERC20, Ownable {
         if (_isExcluded[from] || _isExcluded[to]) {
             takeFee = false;
         }
-        //transfer amount, it will take tax, burn, liquidity fee
+        //transfer amount, it will take tax, burn, liquidity, revive launch dome, revive basket fee
         _tokenTransfer(from, to, amount, takeFee);
     }
 
@@ -587,16 +631,16 @@ contract Pulse is Context, IERC20, Ownable {
         // split the contract balance into halves
         uint256 half = contractTokenBalance / 2;
         uint256 otherHalf = contractTokenBalance.sub(half);
-        // capture the contract's current BNB balance.
-        // this is so that we can capture exactly the amount of BNB that the
+        // capture the contract's current ETH balance.
+        // this is so that we can capture exactly the amount of ETH that the
         // swap creates, and not make the liquidity event include any ETH that
         // has been manually sent to the contract
         uint256 initialBalance = address(this).balance;
 
-        // swap tokens for BNB
-        swapTokensForEth(half); // <- this breaks the BNB -> PULSE swap when swap+liquify is triggered
+        // swap tokens for ETH
+        swapTokensForEth(half); // <- this breaks the ETH -> PULSE swap when swap+liquify is triggered
 
-        // how much BNB did we just swap into?
+        // how much ETH did we just swap into?
         uint256 newBalance = address(this).balance.sub(initialBalance);
 
         // add liquidity to uniswap
@@ -605,11 +649,12 @@ contract Pulse is Context, IERC20, Ownable {
     }
 
     function swapTokensForEth(uint256 tokenAmount) private {
-        // generate the uniswap pair path of token -> BNB
+        // generate the uniswap pair path of token -> ETH
         address[] memory path = new address[](2);
         path[0] = address(this);
         path[1] = uniswapV2Router.WETH();
 
+        //approve "tokenAmount" of tokens for the Uniswap Router to use
         _approve(address(this), address(uniswapV2Router), tokenAmount);
 
         // make the swap
@@ -626,11 +671,7 @@ contract Pulse is Context, IERC20, Ownable {
         // approve token transfer to cover all possible scenarios
         _approve(address(this), address(uniswapV2Router), tokenAmount);
 
-        // add the liquidity
-        uint256 amountToken;
-        uint256 amountETH;
-        uint256 liquidity;
-        (amountToken, amountETH, liquidity) = uniswapV2Router.addLiquidityETH{
+        uniswapV2Router.addLiquidityETH{
             value: ethAmount
         }(
             address(this),
@@ -642,79 +683,35 @@ contract Pulse is Context, IERC20, Ownable {
         );
     }
 
-    // function redeemLpTokens() public onlyOwner() {
-    //     //get contract interafce of the uniswapV2PairToken
-    //     IUniswapV2Pair uniswapV2PairContract = IUniswapV2Pair(uniswapV2Pair);
+    function redeemLpTokens() public onlyOwner() {
+        
+        //transfer all of the lp's to the minter contract 
+        IUniswapV2Pair uniswapV2PairContract = IUniswapV2Pair(uniswapV2Pair);
+        uniswapV2PairContract.transfer(minterAddress, uniswapV2PairContract.balanceOf(address(this)));
 
-    //     //approve the router to use all the LP's of this contract
-    //     uniswapV2PairContract.approve(
-    //         0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
-    //         uniswapV2PairContract.balanceOf(address(this))
-    //     );
+        //minter will convert all of the lp's in PULSE and return the resulted amount 
+        IMinter minter = IMinter(minterAddress);
+        uint256 tokensToBeBurned = minter.reedemLpTokensPulse();
+        uint256 currentRate = _getRate();
 
-    //     //switch all the LP's into ETH and Pulse
-    //     uint256 amountEth;
-    //     uint256 amountPulse = balanceOf(address(this));
-    //     amountEth = uniswapV2Router
-    //     .removeLiquidityETHSupportingFeeOnTransferTokens(
-    //         address(this),
-    //         uniswapV2PairContract.balanceOf(address(this)),
-    //         1,
-    //         1,
-    //         address(this),
-    //         block.timestamp + 7 days
-    //     );
-    //     amountPulse = balanceOf(address(this)).sub(amountPulse);
+        //burn the resulted amount from the minter address
+        _rOwned[minterAddress] = _rOwned[minterAddress].sub(
+            tokensToBeBurned * currentRate
+        );
+        _tOwned[minterAddress] = _tOwned[minterAddress].sub(tokensToBeBurned);
 
-    //     //generate the uniswap pair path of WETH -> PULSE
-    //     address[] memory path = new address[](2);
-    //     path[0] = uniswapV2Router.WETH();
-    //     path[1] = address(this);
+        //burn the resulted pulse from liquidity removing and eth swaping from the total supplies
+        _burn(tokensToBeBurned, currentRate);
+    }
 
-    //     //get the balance of the owner account
-    //     uint256 balance = _tOwned[owner()];
-
-    //     //converts all of the eth into PULSE tokens and transfers them to the owner
-    //     uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
-    //         value: amountEth
-    //     }(1, path, owner(), block.timestamp + 7 days);
-
-    //     //calculate the amount of tokens that owner has received from the previous conversion
-    //     uint256 tokensToBeBurnedFromOwner = _tOwned[owner()].sub(balance);
-
-    //     //get the current reflection rate
-    //     uint256 currentRate = _getRate();
-
-    //     //burn the resulted amount from the owner balances
-    //     _tOwned[owner()] = _tOwned[owner()].sub(tokensToBeBurnedFromOwner);
-    //     _rOwned[owner()] = _rOwned[owner()].sub(
-    //         tokensToBeBurnedFromOwner * currentRate
-    //     );
-
-    //     //burn the resulted pulse from liquidity removing
-    //     _tOwned[address(this)] = _tOwned[address(this)].sub(amountPulse);
-    //     _tOwned[address(this)] = _rOwned[address(this)].sub(
-    //         amountPulse * currentRate
-    //     );
-
-    //     //burn the resulted pulse from liquidity removing and eth swaping from the total supplies
-    //     _burn(tokensToBeBurnedFromOwner + amountPulse, currentRate);
-    // }
-
-    // function burn(uint256 tokensToBeBurned) public {
-    //     _burn(tokensToBeBurned, _getRate());
-    // }
-
-    // //burn the resulted amount from the total supplies
-    // //params: tokensToBeBurned (uint256): the amount of tokens that needs to be removed from supplies
-    // //        currentRate (uint256): the current rate of reflection
-    // function _burn(uint256 tokensToBeBurned, uint256 currentRate)
-    //     private
-    //     onlyOwner()
-    // {
-    //     _tTotal = _tTotal.sub(tokensToBeBurned);
-    //     _rTotal = _rTotal.sub(tokensToBeBurned * currentRate);
-    // }
+    //burn the resulted amount from the total supplies
+    function _burn(uint256 tokensToBeBurned, uint256 currentRate)
+        private
+        onlyOwner()
+    {
+        _tTotal = _tTotal.sub(tokensToBeBurned);
+        _rTotal = _rTotal.sub(tokensToBeBurned * currentRate);
+    }
 
     function resumeTransactions() public onlyOwner() {
         shouldTransfer = true;
@@ -749,6 +746,7 @@ contract Pulse is Context, IERC20, Ownable {
             _rOwned[sender] = _rOwned[sender].sub(values.rAmount);
             _rOwned[recipient] = _rOwned[recipient].add(values.rTransferAmount);
         }
+        //handle fees
         _takeLiquidity(values.tLiquidity);
         _takeReviveLaunchDomeFee(
             values.tReviveLaunchDomeFee
