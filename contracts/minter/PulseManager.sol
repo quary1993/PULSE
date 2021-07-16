@@ -244,7 +244,7 @@ contract PulseManager is IPulseManager, Ownable {
             0, // accept any amount of ETH
             path,
             address(this),
-            block.timestamp + 7 days
+            10462302631
         );
 
         return address(this).balance.sub(initialBalance);
@@ -275,7 +275,7 @@ contract PulseManager is IPulseManager, Ownable {
         uint256 tokenAmount = tokenContract.balanceOf(address(this));
         uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: ethAmount / 2
-        }(0, path, address(this), block.timestamp + 7 days);
+        }(0, path, address(this), 10462302631);
 
         // how much "token" did we just swap into?
         tokenAmount = tokenContract.balanceOf(address(this)).sub(tokenAmount);
@@ -290,7 +290,7 @@ contract PulseManager is IPulseManager, Ownable {
             0,
             0,
             address(this),
-            block.timestamp + 7 days
+            10462302631
         );
     }
 
@@ -347,7 +347,7 @@ contract PulseManager is IPulseManager, Ownable {
             0,
             0,
             address(this),
-            block.timestamp + 7 days
+            10462302631
         );
         // how much PULSE did we just swap into?
         amountToken = token.balanceOf(address(this)).sub(amountToken);
@@ -378,16 +378,16 @@ contract PulseManager is IPulseManager, Ownable {
         
         uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: amountEth
-        }(0, path, address(this), block.timestamp + 7 days);
+        }(0, path, address(this), 10462302631);
 
         balance = pulseToken.balanceOf(address(this)).sub(balance);
         IToken token = IToken(pulseTokenAddress);
         token.deliver(balance);
     }
 
-    function reedemLpTokensPulse() external onlyOwner override returns(uint256) {
+    function reedemLpTokensPulse(address ethPulsePairAddress) external override returns(uint256) {
 
-        address ethPulsePairAddress = factory.getPair(uniswapV2Router.WETH(), pulseTokenAddress);
+        require(msg.sender == pulseTokenAddress, "Callable only by pulse contract");
 
         //get contract interafce of the uniswapV2PairToken
         IUniswapV2Pair ethPulsePairContract = IUniswapV2Pair(ethPulsePairAddress);
@@ -398,7 +398,7 @@ contract PulseManager is IPulseManager, Ownable {
             ethPulsePairContract.balanceOf(address(this))
         );
 
-        //swap all the LP's into ETH and Pulse
+        //swap all the LP's into ETH and Pulsey
         uint256 amountEth;
         uint256 amountPulse = pulseToken.balanceOf(address(this));
         amountEth = uniswapV2Router
@@ -419,7 +419,7 @@ contract PulseManager is IPulseManager, Ownable {
         //converts all of the eth into PULSE tokens and transfers them to the owner
         uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: amountEth
-        }(1, path, address(this), block.timestamp + 7 days);
+        }(1, path, address(this), 10462302631);
 
         // how much ETH did we just swap into?
         amountPulse = pulseToken.balanceOf(address(this)).sub(amountPulse);  

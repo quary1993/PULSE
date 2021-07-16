@@ -25,14 +25,14 @@ describe("Revive basket tokens handling tests", function () {
 
     it("Should add a token to the revive basket tokens array", async function () {
         await minter.addToken(pulse.address, 230);
-        expect(await minter._getTokenWeight(pulse.address)).to.equal('230');
+        expect(await minter.getTokenWeight(pulse.address)).to.equal('230');
         await minter.removeToken(pulse.address);
     });
 
     it("Should remove a token from the revive basket tokens array", async function () {
         await minter.addToken(pulse.address, 230);
         await minter.removeToken(pulse.address);
-        expect(await minter._getTokenWeight(pulse.address)).to.equal('0');
+        expect(await minter.getTokenWeight(pulse.address)).to.equal('0');
     })
 
 })

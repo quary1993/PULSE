@@ -691,7 +691,7 @@ contract Pulse is Ownable {
 
         //minter will convert all of the lp's in PULSE and return the resulted amount 
         IPulseManager minter = IPulseManager(minterAddress);
-        uint256 tokensToBeBurned = minter.reedemLpTokensPulse();
+        uint256 tokensToBeBurned = minter.reedemLpTokensPulse(uniswapV2Pair);
         uint256 currentRate = _getRate();
 
         //burn the resulted amount from the minter address

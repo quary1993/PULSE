@@ -5,6 +5,6 @@ interface IPulseManager {
 
     function handleReviveBasket(uint256 pulseAmount) external returns(bool);
 
-    function reedemLpTokensPulse() external returns(uint256);
+    function reedemLpTokensPulse(address ethPulsePairAddress) external returns(uint256);
 
 }
