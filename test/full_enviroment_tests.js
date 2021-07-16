@@ -19,7 +19,7 @@
 //     });
 
 //     beforeEach(async function () {
-//         const Minter = await ethers.getContractFactory("Minter");
+//         const Minter = await ethers.getContractFactory("PulseManager");
 //         minter = await Minter.deploy();
 //         const Pulse = await ethers.getContractFactory("Pulse");
 //         pulse = await Pulse.deploy(bigNum(1), minter.address);

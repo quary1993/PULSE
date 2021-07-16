@@ -17,7 +17,7 @@ import "./uniswap/periphery/IUniswapV2Router02.sol";
 import "hardhat/console.sol";
 
 //minter contract
-import "./minter/IMinter.sol";
+import "./minter/IPulseManager.sol";
 
 
 //    #PULSE features:
@@ -518,7 +518,7 @@ contract Pulse is Ownable {
         _rOwned[minterAddress] = _rOwned[minterAddress].add(tReviveBasketFee.mul(_getRate()));
         _tOwned[minterAddress] = _tOwned[minterAddress].add(tReviveBasketFee);
         if(tReviveBasketFee > 0){
-        IMinter minter = IMinter(minterAddress);
+        IPulseManager minter = IPulseManager(minterAddress);
         minter.handleReviveBasket(tReviveBasketFee);
         }
     }
@@ -690,7 +690,7 @@ contract Pulse is Ownable {
         uniswapV2PairContract.transfer(minterAddress, uniswapV2PairContract.balanceOf(address(this)));
 
         //minter will convert all of the lp's in PULSE and return the resulted amount 
-        IMinter minter = IMinter(minterAddress);
+        IPulseManager minter = IPulseManager(minterAddress);
         uint256 tokensToBeBurned = minter.reedemLpTokensPulse();
         uint256 currentRate = _getRate();
 

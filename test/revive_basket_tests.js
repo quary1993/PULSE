@@ -25,7 +25,7 @@ describe("Revive basket tests", function () {
 
     beforeEach(async function () {
         //deploy minter
-        const Minter = await ethers.getContractFactory("Minter");
+        const Minter = await ethers.getContractFactory("PulseManager");
         minter = await Minter.deploy();
 
         //deploy pulse

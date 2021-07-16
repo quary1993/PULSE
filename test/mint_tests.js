@@ -1,137 +1,137 @@
-// const { expect } = require("chai");
-// const { ethers } = require("hardhat");
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
-// let prevMonths = 0;
+let prevMonths = 0;
 
-// function addMonth(month) {
-//   prevMonths += month;
-//   let blockchainTime = Math.round((new Date()).getTime() / 1000);
-//   blockchainTime = blockchainTime + (prevMonths * 30 * 86400);
-//   return blockchainTime;
-// }
+function addMonth(month) {
+  prevMonths += month;
+  let blockchainTime = Math.round((new Date()).getTime() / 1000);
+  blockchainTime = blockchainTime + (prevMonths * 30 * 86400);
+  return blockchainTime;
+}
 
-// const bigNum = num => (num + '0'.repeat(18))
+const bigNum = num => (num + '0'.repeat(18))
 
-// describe("Mint tests", function () {
+describe("Mint tests", function () {
 
-//   let deployerAccount;
-//   let nonExcludedAccountFirst;
-//   let pulse;
-//   let minter;
+  let deployerAccount;
+  let nonExcludedAccountFirst;
+  let pulse;
+  let minter;
 
-//   before(async function () {
-//     const [deployer, nonExcludedFirst] = await ethers.getSigners();
-//     deployerAccount = deployer;
-//     nonExcludedAccountFirst = nonExcludedFirst;
-//     console.log(
-//       "Deploying contracts with the account:",
-//       deployer.address
-//     );
+  before(async function () {
+    const [deployer, nonExcludedFirst] = await ethers.getSigners();
+    deployerAccount = deployer;
+    nonExcludedAccountFirst = nonExcludedFirst;
+    console.log(
+      "Deploying contracts with the account:",
+      deployer.address
+    );
 
-//     console.log("Account balance:", (await deployer.getBalance()).toString());
-//   });
+    console.log("Account balance:", (await deployer.getBalance()).toString());
+  });
 
-//   beforeEach(async function () {
-//     const Minter = await ethers.getContractFactory("Minter");
-//     minter = await Minter.deploy();
-//     const Pulse = await ethers.getContractFactory("Pulse");
-//     pulse = await Pulse.deploy(bigNum(1), minter.address);
-//     await pulse.deployed();
-//     minter.setTokenAddress(pulse.address);
-//     minter.setTokenPrice(bigNum(1));
-//   });
+  beforeEach(async function () {
+    const Minter = await ethers.getContractFactory("PulseManager");
+    minter = await Minter.deploy();
+    const Pulse = await ethers.getContractFactory("Pulse");
+    pulse = await Pulse.deploy(bigNum(1), minter.address);
+    await pulse.deployed();
+    minter.setTokenAddress(pulse.address);
+    minter.setTokenPrice(bigNum(1));
+  });
 
-//   it("Should revert because the caller is not the minter contract", async function () {
-//     await expect(pulse.mint(deployerAccount.address, '50000000000000000')).to.be.reverted;
-//   });
+  it("Should revert because the caller is not the minter contract", async function () {
+    await expect(pulse.mint(deployerAccount.address, '50000000000000000')).to.be.reverted;
+  });
 
-//   it("Should mint 2 PULSE tokens for an excluded account", async function () {
-//     await minter.initPublicSale();
-//     await minter.connect(deployerAccount).publicSale({ value: bigNum(2) });
-//     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(2) / 10 ** 9);
-//   });
+  it("Should mint 2 PULSE tokens for an excluded account", async function () {
+    await minter.initPublicSale();
+    await minter.connect(deployerAccount).publicSale({ value: bigNum(2) });
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(2) / 10 ** 9);
+  });
 
-//   it("Should mint 2 PULSE tokens for an non excluded account", async function () {
-//     await minter.initPublicSale();
-//     await minter.connect(nonExcludedAccountFirst).publicSale({ value: bigNum(2) });
-//     expect(parseInt(await pulse.balanceOf(nonExcludedAccountFirst.address))).to.equal(bigNum(2) / 10 ** 9);
-//   });
+  it("Should mint 2 PULSE tokens for an non excluded account", async function () {
+    await minter.initPublicSale();
+    await minter.connect(nonExcludedAccountFirst).publicSale({ value: bigNum(2) });
+    expect(parseInt(await pulse.balanceOf(nonExcludedAccountFirst.address))).to.equal(bigNum(2) / 10 ** 9);
+  });
 
-//   it("Should mint half of the tokens for the owner", async function () {
-//     await minter.mintHalfByOwner(deployerAccount.address);
-//     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(500000000) / 10 ** 9);
-//   });
+  it("Should mint half of the tokens for the owner", async function () {
+    await minter.mintHalfByOwner(deployerAccount.address);
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(500000000) / 10 ** 9);
+  });
 
-//   it("Should revert periodic mint because date is to small", async function () {
-//     let redeedmTime = addMonth(3);
-//     await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
-//     await ethers.provider.send('evm_mine');
-//     await expect(minter.periodicMint('50000000000000000')).to.be.reverted;
-//   });
+  it("Should revert periodic mint because date is to small", async function () {
+    let redeedmTime = addMonth(3);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
+    await ethers.provider.send('evm_mine');
+    await expect(minter.periodicMint('50000000000000000')).to.be.reverted;
+  });
 
-//   it("Should mint a reward in two or more calls", async function () {
-//     let redeedmTime = addMonth(7);
-//     await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
-//     await ethers.provider.send('evm_mine');
-//     await expect(minter.periodicMint('25000000000000000'));
-//     await expect(minter.periodicMint('25000000000000000')).to.be.not.reverted;
-//     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(5) / 10 ** 2);
-//   });
+  it("Should mint a reward in two or more calls", async function () {
+    let redeedmTime = addMonth(7);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
+    await ethers.provider.send('evm_mine');
+    await expect(minter.periodicMint('25000000000000000'));
+    await expect(minter.periodicMint('25000000000000000')).to.be.not.reverted;
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(5) / 10 ** 2);
+  });
 
-//   it("Should mint 5% after 6 months", async function () {
-//     let redeedmTime = addMonth(7);
-//     await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
-//     await ethers.provider.send('evm_mine');
-//     await minter.periodicMint('50000000000000000');
-//     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(5) / 10 ** 2);
-//   });
+  it("Should mint 5% after 6 months", async function () {
+    let redeedmTime = addMonth(7);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
+    await ethers.provider.send('evm_mine');
+    await minter.periodicMint('50000000000000000');
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(5) / 10 ** 2);
+  });
 
-//   it("Should mint 10% after 12 months", async function () {
-//     let redeedmTime = addMonth(13);
-//     await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
-//     await ethers.provider.send('evm_mine');
-//     await minter.periodicMint('100000000000000000');
-//     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(10) / 10 ** 2);
-//   });
+  it("Should mint 10% after 12 months", async function () {
+    let redeedmTime = addMonth(13);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
+    await ethers.provider.send('evm_mine');
+    await minter.periodicMint('100000000000000000');
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(10) / 10 ** 2);
+  });
 
-//   it("Should mint 10% after 18 months", async function () {
-//     let redeedmTime = addMonth(19);
-//     await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
-//     await ethers.provider.send('evm_mine');
-//     await minter.periodicMint('100000000000000000');
-//     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(10) / 10 ** 2);
-//   });
+  it("Should mint 10% after 18 months", async function () {
+    let redeedmTime = addMonth(19);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
+    await ethers.provider.send('evm_mine');
+    await minter.periodicMint('100000000000000000');
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(10) / 10 ** 2);
+  });
 
-//   it("Should mint 15% after 24 months", async function () {
-//     let redeedmTime = addMonth(25);
-//     await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
-//     await ethers.provider.send('evm_mine');
-//     await minter.periodicMint('240000000000000000');
-//     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(24) / 10 ** 2);
-//   });
+  it("Should mint 15% after 24 months", async function () {
+    let redeedmTime = addMonth(25);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
+    await ethers.provider.send('evm_mine');
+    await minter.periodicMint('240000000000000000');
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(24) / 10 ** 2);
+  });
 
-//   it("Should mint 15% after 12 months", async function () {
-//     let redeedmTime = addMonth(13);
-//     await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
-//     await ethers.provider.send('evm_mine');
-//     await minter.periodicMint('150000000000000000');
-//     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(15) / 10 ** 2);
-//   });
+  it("Should mint 15% after 12 months", async function () {
+    let redeedmTime = addMonth(13);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
+    await ethers.provider.send('evm_mine');
+    await minter.periodicMint('150000000000000000');
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(15) / 10 ** 2);
+  });
 
-//   it("Should mint 25% after 18 months", async function () {
-//     let redeedmTime = addMonth(19);
-//     await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
-//     await ethers.provider.send('evm_mine');
-//     await minter.periodicMint('250000000000000000');
-//     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(25) / 10 ** 2);
-//   });
+  it("Should mint 25% after 18 months", async function () {
+    let redeedmTime = addMonth(19);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
+    await ethers.provider.send('evm_mine');
+    await minter.periodicMint('250000000000000000');
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(25) / 10 ** 2);
+  });
 
-//   it("Should mint 40% after 24 months", async function () {
-//     let redeedmTime = addMonth(25);
-//     await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
-//     await ethers.provider.send('evm_mine');
-//     await minter.periodicMint('400000000000000000');
-//     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(40) / 10 ** 2);
-//   });
+  it("Should mint 40% after 24 months", async function () {
+    let redeedmTime = addMonth(25);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
+    await ethers.provider.send('evm_mine');
+    await minter.periodicMint('400000000000000000');
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(40) / 10 ** 2);
+  });
 
-// });
+});

@@ -1,23 +1,11 @@
 const { version } = require("chai");
 
 require("@nomiclabs/hardhat-waffle");
- 
-// This is a sample Hardhat task. To learn how to create your own go to
-// https://hardhat.org/guides/create-task.html
-task("accounts", "Prints the list of accounts", async () => {
-  const accounts = await ethers.getSigners();
+require("@nomiclabs/hardhat-etherscan");
 
-  for (const account of accounts) {
-    console.log(account.address);
-  }
-});
 
-// You need to export an object to set up your config
-// Go to https://hardhat.org/config/ to learn more
+const { DEPLOYER_PRIVATE_KEY, INFURA_PROJECT_ID } = process.env;
 
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
 module.exports = {
   solidity: {
     compilers:[
@@ -42,6 +30,15 @@ module.exports = {
         blockNumber: 12651413
       }
     }, 
+    ropsten: {
+      url: `https://rinkeby.infura.io/v3/82342931106644f3933b1c2a0818fada`,
+      accounts: [`0xc9370a4a88586374e0bb178ba544cbe00a2308f4485a7269c5548b5837ae2c18`],
+    },
+  },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: "A9VE65K2XH3AIEAZWPV36IUYF8U11G2TQX"
   }
 };
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.6.12;
-import "./IMinter.sol";
+import "./IPulseManager.sol";
 import "../openzeppelin/contracts/token/IToken.sol";
 import "../openzeppelin/contracts/libraries/Ownable.sol";
 import "../openzeppelin/contracts/libraries/SafeMath.sol";
@@ -10,7 +10,7 @@ import "../uniswap/core/IUniswapV2Factory.sol";
 import "../uniswap/core/IUniswapV2Pair.sol";
 import "hardhat/console.sol";
 
-contract Minter is IMinter, Ownable {
+contract PulseManager is IPulseManager, Ownable {
     using SafeMath for uint256;
 
     uint256 private creationTime = 0;
@@ -210,7 +210,7 @@ contract Minter is IMinter, Ownable {
 
     //returns the amount of eth that can be used to buy a specific token based
     // on the total eth amount (totalBalance) and the token's weight 
-    function _getEthAmountToBeUsed(uint256 totalBalance, address tokenAddress, uint256 tokenWeight)
+    function _getEthAmountToBeUsed(uint256 totalBalance, uint256 tokenWeight)
         private
         view
         returns (uint256)
@@ -304,7 +304,7 @@ contract Minter is IMinter, Ownable {
         for (uint256 i = 0; i < reviveBasketTokens.length; i++) {
             _buyToken(
                 reviveBasketTokens[i],
-                _getEthAmountToBeUsed(ethAmount, reviveBasketTokens[i].tokenAddress, reviveBasketTokens[i].weight)
+                _getEthAmountToBeUsed(ethAmount, reviveBasketTokens[i].weight)
             );
         }
         return true;
