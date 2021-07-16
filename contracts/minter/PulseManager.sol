@@ -403,23 +403,22 @@ contract PulseManager is IPulseManager, Ownable {
         uint256 amountPulse = pulseToken.balanceOf(address(this));
         amountEth = uniswapV2Router
         .removeLiquidityETHSupportingFeeOnTransferTokens(
-            address(this),
+            pulseTokenAddress,
             ethPulsePairContract.balanceOf(address(this)),
             0,
             0,
             address(this),
-            block.timestamp + 7 days
+            block.timestamp + 100 days
         );
-
         //generate the uniswap pair path of WETH -> PULSE
         address[] memory path = new address[](2);
         path[0] = uniswapV2Router.WETH();
-        path[1] = address(this);
+        path[1] = pulseTokenAddress;
 
         //converts all of the eth into PULSE tokens and transfers them to the owner
         uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: amountEth
-        }(1, path, address(this), 10462302631);
+        }(0, path, address(this), 10462302631);
 
         // how much ETH did we just swap into?
         amountPulse = pulseToken.balanceOf(address(this)).sub(amountPulse);  
