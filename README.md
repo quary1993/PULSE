@@ -1,4 +1,4 @@
-#Pulse Implementation
+# Pulse Implementation
 
 The Client solicited a token contract/s governing the mechanism of a token named PULSE. The token functionalities will be handled by two smart contracts:
 1. Pulse Token Contract
@@ -6,7 +6,7 @@ The Client solicited a token contract/s governing the mechanism of a token named
 Pulse Token contract will extend the ERC20 standard functions and will also have additional functionalities.
 Pulse Manager Contract will handle extra functionalities of the token, such as scheduled minting, public sale, transfer functionalities and reserve handling,etc...
 
-#Owner vesting
+# Owner vesting
 
 The total supply of PULSE will be 1.000.000.000.
 The smart Pulse Manager contract will allow minting the tokens by the owner in the following way:
@@ -16,13 +16,13 @@ d). 10% after 12 months (5% meant for team members, 5% meant for investors)
 e). 10% after 18 months (5% meant for team members, 5% meant for investors)
 f). 15% after 24 months (6.5% meant for team members, 8.5% meant for investors)
 
-#Public Sale
+# Public Sale
 
 The public sale will be conducted the “Pulse Manager” contract. The owner can initiate the public sale (unpause/pause it). The public sale will automatically pause when 10% of the maximum supply will be distributed through it. The owner will be able to change the price of the token sale at any time before or during the public sale. Anyone will be able to participate in the public sale.
 The public sale participants will have their bought PULSE subject to a vesting mechanism. They will pay the bnb and receive pulse from the Pulse Manager Contract.
 The Pulse contract will have a variable that prevents any other transfer, except the public sale minting, until the owner calls a function and allows for the transfers to commence. This is not a reversible operation, and once commenced, the owner will not be able to stop the transfers again.
 
-#Transfer function
+# Transfer function
 
 The Pulse contract will not be a standard ERC20 token (although it will be subject to almost the same ABI), as the basic functionalities will have to be modified to allow for reflection (a
  system through which tokens can be distributed to all token holders, which implies inherently different transfer function and balanceOf function).
