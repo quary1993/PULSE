@@ -61,9 +61,9 @@ contract Pulse is Ownable {
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
 
-    string private _name = "Pulse";
-    string private _symbol = "PULSE";
-    uint8 private _decimals = 9;
+    string private constant _name = "Pulse";
+    string private constant _symbol = "PULSE";
+    uint8 private constant _decimals = 9;
 
     //declaring fee percentages 
     uint256 public _taxFee = 1;
@@ -88,7 +88,6 @@ contract Pulse is Ownable {
     bool public swapAndLiquifyEnabled = true;
 
     uint256 public _maxTxAmount = 5000000 * 10**9;
-    uint256 private numTokensSellToAddToLiquidity = 500000 * 10**9;
 
     uint256 tokenPrice = 20 * 10**18;
     bool shouldTransfer = false;
@@ -137,7 +136,7 @@ contract Pulse is Ownable {
     event SwapAndLiquify(
         uint256 tokensSwapped,
         uint256 ethReceived,
-        uint256 tokensIntoLiqudity
+        uint256 tokensIntoLiquidity
     );
 
     constructor(uint256 _tokenPrice, address _minterAddress) public {
@@ -177,15 +176,15 @@ contract Pulse is Ownable {
 
     receive() external payable {}
 
-    function name() public view returns (string memory) {
+    function name() public pure returns (string memory) {
         return _name;
     }
 
-    function symbol() public view returns (string memory) {
+    function symbol() public pure returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public view returns (uint8) {
+    function decimals() public pure returns (uint8) {
         return _decimals;
     }
 
@@ -334,7 +333,7 @@ contract Pulse is Ownable {
     }
 
     function includeInReward(address account) external onlyOwner {
-        require(_isExcluded[account], "Account is already included");
+        require(_isExcluded[account], "Account is not excluded");
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
@@ -733,9 +732,6 @@ contract Pulse is Ownable {
         } else if (!_isExcluded[sender] && _isExcluded[recipient]) {
             _rOwned[sender] = _rOwned[sender].sub(values.rAmount);
             _tOwned[recipient] = _tOwned[recipient].add(values.tTransferAmount);
-            _rOwned[recipient] = _rOwned[recipient].add(values.rTransferAmount);
-        } else if (!_isExcluded[sender] && !_isExcluded[recipient]) {
-            _rOwned[sender] = _rOwned[sender].sub(values.rAmount);
             _rOwned[recipient] = _rOwned[recipient].add(values.rTransferAmount);
         } else if (_isExcluded[sender] && _isExcluded[recipient]) {
             _tOwned[sender] = _tOwned[sender].sub(amount);
