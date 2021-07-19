@@ -1,3 +1,9 @@
+/*
+
+for this test to work, "_burn" should be make public
+
+*/
+
 // const { expect } = require("chai");
 // const { ethers } = require("hardhat");
 
@@ -17,7 +23,7 @@
 //     });
 
 //     it("Should burn 50% of the total amount and tokens", async function() {
-//         await pulse.burn('500000000000000000');
+//         await pulse._burn('500000000000000000');
 //         expect(await pulse.totalSupply()).to.equal('500000000000000000');
 //     });
 // });

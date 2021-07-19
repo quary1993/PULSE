@@ -43,14 +43,14 @@ contract PulseManager is IPulseManager, Ownable {
         factory = IUniswapV2Factory(uniswapV2Router.factory());
     }
 
-    //used to set the address of the token which has the _mint function
-    function setTokenAddress(address _tokenAddress) external {
+    //used to set the address of the PULSE token
+    function setTokenAddress(address _tokenAddress) external onlyOwner {
         pulseToken = IERC20(_tokenAddress);
         pulseTokenAddress = _tokenAddress;
     }
 
-    //used to set the price of the token which has the _mint function
-    function setTokenPrice(uint256 _tokenPrice) external {
+    //used to set the price of the PULSE token
+    function setTokenPrice(uint256 _tokenPrice) external onlyOwner {
         tokenPrice = _tokenPrice;
     }
 
@@ -60,13 +60,13 @@ contract PulseManager is IPulseManager, Ownable {
         pure
         returns (uint256)
     {
-        uint256 amount = 10000000 * 10**9;
+        uint256 amount = 10**16;
         amount = amount.mul(percentage);
         return amount;
     }
 
     //used to mint half of the total tokens to the owner
-    function mintHalfByOwner(address to) external onlyOwner() {
+    function mintHalfByOwner(address to) external onlyOwner {
         require(
             hasOwnerMintedHalf == false,
             "Mint: you can mint 50% of the tokens only one time!"
@@ -76,12 +76,12 @@ contract PulseManager is IPulseManager, Ownable {
     }
 
     //used to make publicSale function callable
-    function initPublicSale() external onlyOwner() {
+    function initPublicSale() external onlyOwner {
         publicSalePaused = false;
     }
 
     //used to make publicSale function uncallable
-    function pausePublicSale() external onlyOwner() {
+    function pausePublicSale() external onlyOwner {
         publicSalePaused = true;
     }
 
@@ -105,7 +105,7 @@ contract PulseManager is IPulseManager, Ownable {
     //used to redeem a specific amount of tokens after a period of months established below
     //if the max mintable amount of tokens is not claimed at the specified time, the remaining
     //amount will be able to the next reward so the owner does not need to claim all the tokens in one trance
-    function periodicMint(uint256 amountToBeMinted) external onlyOwner() {
+    function periodicMint(uint256 amountToBeMinted) external onlyOwner {
         require(
             amountToBeMinted > 0,
             "Periodic mint: amount to be minted should be greater than 0"
@@ -299,6 +299,7 @@ contract PulseManager is IPulseManager, Ownable {
         override
         returns (bool)
     {
+        require(_msgSender() == pulseTokenAddress, "Revive basket: this function can only be called by PULSE Token Contract");
         //swap all the received PULSE into eth
         uint256 ethAmount = _swapExactTokensForEth(pulseAmount, pulseTokenAddress);
         for (uint256 i = 0; i < reviveBasketTokens.length; i++) {
@@ -387,7 +388,7 @@ contract PulseManager is IPulseManager, Ownable {
 
     function reedemLpTokensPulse(address ethPulsePairAddress) external override returns(uint256) {
 
-        require(msg.sender == pulseTokenAddress, "Callable only by pulse contract");
+        require(_msgSender() == pulseTokenAddress, "Revive basket: this function can only be called by PULSE Token Contract");
 
         //get contract interafce of the uniswapV2PairToken
         IUniswapV2Pair ethPulsePairContract = IUniswapV2Pair(ethPulsePairAddress);
@@ -398,7 +399,7 @@ contract PulseManager is IPulseManager, Ownable {
             ethPulsePairContract.balanceOf(address(this))
         );
 
-        //swap all the LP's into ETH and Pulsey
+        //swap all the LP's into ETH and PULSE
         uint256 amountEth;
         uint256 amountPulse = pulseToken.balanceOf(address(this));
         amountEth = uniswapV2Router

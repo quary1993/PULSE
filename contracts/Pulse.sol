@@ -194,7 +194,7 @@ contract Pulse is Ownable {
     }
 
     //sets how much ETH should PULSE cost (it should be an 18 decimals number)
-    function setTokenPrice(uint256 _tokenPrice) public {
+    function setTokenPrice(uint256 _tokenPrice) public onlyOwner {
         tokenPrice = _tokenPrice;
     }
 
@@ -323,7 +323,7 @@ contract Pulse is Ownable {
         return rAmount / currentRate;
     }
 
-    function excludeFromReward(address account) public onlyOwner() {
+    function excludeFromReward(address account) external onlyOwner {
         // require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 'We can not exclude Uniswap router.');
         require(!_isExcluded[account], "Account is already excluded");
         if (_rOwned[account] > 0) {
@@ -333,7 +333,7 @@ contract Pulse is Ownable {
         _excluded.push(account);
     }
 
-    function includeInReward(address account) external onlyOwner() {
+    function includeInReward(address account) external onlyOwner {
         require(_isExcluded[account], "Account is already included");
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
@@ -346,15 +346,15 @@ contract Pulse is Ownable {
         }
     }
 
-    function setTaxFeePercent(uint256 taxFee) external onlyOwner() {
+    function setTaxFeePercent(uint256 taxFee) external onlyOwner {
         _taxFee = taxFee;
     }
 
-    function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner() {
+    function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner {
         _liquidityFee = liquidityFee;
     }
 
-    function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner() {
+    function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner {
         _maxTxAmount = _tTotal.mul(maxTxPercent) / 10**2;
     }
 
@@ -400,22 +400,22 @@ contract Pulse is Ownable {
             uint256
         )
     {
-        uint256 tTransferAmount = tAmount.sub(calculateFee(tAmount, _taxFee));
+        uint256 tTransferAmount = tAmount.sub(_calculateFee(tAmount, _taxFee));
         tTransferAmount = tTransferAmount.sub(
-            calculateFee(tAmount, _liquidityFee)
+            _calculateFee(tAmount, _liquidityFee)
         );
         tTransferAmount = tTransferAmount.sub(
-            calculateFee(tAmount, _reviveLaunchDomeFee)
+            _calculateFee(tAmount, _reviveLaunchDomeFee)
         );
         tTransferAmount = tTransferAmount.sub(
-            calculateFee(tAmount, _reviveBasketFee)
+            _calculateFee(tAmount, _reviveBasketFee)
         );
         return (
             tTransferAmount,
-            calculateFee(tAmount, _taxFee),
-            calculateFee(tAmount, _reviveLaunchDomeFee),
-            calculateFee(tAmount, _liquidityFee),
-            calculateFee(tAmount, _reviveBasketFee)
+            _calculateFee(tAmount, _taxFee),
+            _calculateFee(tAmount, _reviveLaunchDomeFee),
+            _calculateFee(tAmount, _liquidityFee),
+            _calculateFee(tAmount, _reviveBasketFee)
         );
     }
 
@@ -524,7 +524,7 @@ contract Pulse is Ownable {
     }
 
     //returns "_tax" percentage of "_amount"
-    function calculateFee(uint256 _amount, uint256 _tax)
+    function _calculateFee(uint256 _amount, uint256 _tax)
         private
         pure
         returns (uint256)
@@ -533,7 +533,7 @@ contract Pulse is Ownable {
     }
 
     //used to remove all the fees that are being charged when a transfer is taking place
-    function removeAllFee() private {
+    function _removeAllFee() private {
         if (_taxFee == 0 && _liquidityFee == 0) return;
 
         _previousTaxFee = _taxFee;
@@ -548,7 +548,7 @@ contract Pulse is Ownable {
     }
 
     //used to restore all the fees after a transfer that didn't charged any fee had occured
-    function restoreAllFee() private {
+    function _restoreAllFee() private {
         _taxFee = _previousTaxFee;
         _liquidityFee = _previousLiquidityFee;
         _reviveLaunchDomeFee = _previousReviveLaunchDomeFee;
@@ -613,7 +613,7 @@ contract Pulse is Ownable {
             !_isExcluded[from] &&
             contractTokenBalance > 0
         ) {
-            swapAndLiquify(contractTokenBalance);
+            _swapAndLiquify(contractTokenBalance);
         }
 
         //indicates if fee should be deducted from transfer
@@ -627,7 +627,7 @@ contract Pulse is Ownable {
         _tokenTransfer(from, to, amount, takeFee);
     }
 
-    function swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
+    function _swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
         // split the contract balance into halves
         uint256 half = contractTokenBalance / 2;
         uint256 otherHalf = contractTokenBalance.sub(half);
@@ -638,17 +638,17 @@ contract Pulse is Ownable {
         uint256 initialBalance = address(this).balance;
 
         // swap tokens for ETH
-        swapTokensForEth(half); // <- this breaks the ETH -> PULSE swap when swap+liquify is triggered
+        _swapTokensForEth(half); // <- this breaks the ETH -> PULSE swap when swap+liquify is triggered
 
         // how much ETH did we just swap into?
         uint256 newBalance = address(this).balance.sub(initialBalance);
 
         // add liquidity to uniswap
-        addLiquidity(otherHalf, newBalance);
+        _addLiquidity(otherHalf, newBalance);
         emit SwapAndLiquify(half, newBalance, otherHalf);
     }
 
-    function swapTokensForEth(uint256 tokenAmount) private {
+    function _swapTokensForEth(uint256 tokenAmount) private {
         // generate the uniswap pair path of token -> ETH
         address[] memory path = new address[](2);
         path[0] = address(this);
@@ -667,7 +667,7 @@ contract Pulse is Ownable {
         );
     }
 
-    function addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
+    function _addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
         // approve token transfer to cover all possible scenarios
         _approve(address(this), address(uniswapV2Router), tokenAmount);
 
@@ -683,7 +683,7 @@ contract Pulse is Ownable {
         );
     }
 
-    function redeemLpTokens() public onlyOwner() {
+    function redeemLpTokens() public onlyOwner {
         
         //transfer all of the lp's to the minter contract 
         IUniswapV2Pair uniswapV2PairContract = IUniswapV2Pair(uniswapV2Pair);
@@ -707,13 +707,13 @@ contract Pulse is Ownable {
     //burn the resulted amount from the total supplies
     function _burn(uint256 tokensToBeBurned, uint256 currentRate)
         private
-        onlyOwner()
+        onlyOwner
     {
         _tTotal = _tTotal.sub(tokensToBeBurned);
         _rTotal = _rTotal.sub(tokensToBeBurned * currentRate);
     }
 
-    function resumeTransactions() public onlyOwner() {
+    function resumeTransactions() public onlyOwner {
         shouldTransfer = true;
     }
 
@@ -724,7 +724,7 @@ contract Pulse is Ownable {
         uint256 amount,
         bool takeFee
     ) private {
-        if (!takeFee) removeAllFee();
+        if (!takeFee) _removeAllFee();
         Values memory values = _getValues(amount);
         if (_isExcluded[sender] && !_isExcluded[recipient]) {
             _tOwned[sender] = _tOwned[sender].sub(amount);
@@ -756,6 +756,6 @@ contract Pulse is Ownable {
         );
         _reflectFee(values.rFee, values.tFee);
         emit Transfer(sender, recipient, values.tTransferAmount);
-        if (!takeFee) restoreAllFee();
+        if (!takeFee) _restoreAllFee();
     }
 }
