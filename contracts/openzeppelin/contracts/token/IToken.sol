@@ -9,4 +9,5 @@ interface IToken {
     //returns the number of decimals that the token has
     function decimals() external view returns(uint8);
 
+    function burn(uint256 tokenAmount) external;
 }

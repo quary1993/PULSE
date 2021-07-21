@@ -118,7 +118,7 @@ contract Pulse is Ownable {
 
     //checks if the address that called the function is the contract who handles the minting
     modifier onlyMinter {
-        require(msg.sender == minterAddress, "Mint: you are not the minter!");
+        require(_msgSender() == minterAddress, "Mint: you are not the minter!");
         _;
     }
 
@@ -126,6 +126,11 @@ contract Pulse is Ownable {
         inSwapAndLiquify = true;
         _;
         inSwapAndLiquify = false;
+    }
+
+    modifier checkFeeSum {
+        _;
+        require(_taxFee.add(_liquidityFee.add(_reviveBasketFee).add(_reviveLaunchDomeFee)) <= 10, "Pulse: the sum of fees should be less or equal to ten");
     }
 
     //declaring events that are occuring in this contract
@@ -345,12 +350,20 @@ contract Pulse is Ownable {
         }
     }
 
-    function setTaxFeePercent(uint256 taxFee) external onlyOwner {
+    function setTaxFeePercent(uint256 taxFee) external checkFeeSum onlyOwner {
         _taxFee = taxFee;
     }
 
-    function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner {
+    function setLiquidityFeePercent(uint256 liquidityFee) external checkFeeSum onlyOwner {
         _liquidityFee = liquidityFee;
+    }
+
+    function setReviveLaunchDomeFeePercent(uint256 reviveLaunchDomeFee) external checkFeeSum onlyOwner {
+        _reviveLaunchDomeFee = reviveLaunchDomeFee;
+    }
+
+    function setReviveBasketFeePercent(uint256 reviveBasketDomeFee) external checkFeeSum onlyOwner {
+        _reviveLaunchDomeFee = reviveBasketDomeFee;
     }
 
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner {
@@ -630,21 +643,22 @@ contract Pulse is Ownable {
         // split the contract balance into halves
         uint256 half = contractTokenBalance / 2;
         uint256 otherHalf = contractTokenBalance.sub(half);
+        
         // capture the contract's current ETH balance.
         // this is so that we can capture exactly the amount of ETH that the
         // swap creates, and not make the liquidity event include any ETH that
         // has been manually sent to the contract
-        uint256 initialBalance = address(this).balance;
+        uint256 initialEthBalance = address(this).balance;
+        uint256 initialPulseBalance  = balanceOf(address(this));
 
         // swap tokens for ETH
         _swapTokensForEth(half); // <- this breaks the ETH -> PULSE swap when swap+liquify is triggered
-
         // how much ETH did we just swap into?
-        uint256 newBalance = address(this).balance.sub(initialBalance);
-
-        // add liquidity to uniswap
-        _addLiquidity(otherHalf, newBalance);
-        emit SwapAndLiquify(half, newBalance, otherHalf);
+        uint256 ethAmount = address(this).balance.sub(initialEthBalance);
+        uint256 actualPulseSwapped = initialPulseBalance.sub(balanceOf(address(this)));
+        otherHalf = otherHalf.add(half - actualPulseSwapped);
+        _addLiquidity(otherHalf, ethAmount);
+        emit SwapAndLiquify(half, ethAmount, otherHalf);
     }
 
     function _swapTokensForEth(uint256 tokenAmount) private {
@@ -655,7 +669,7 @@ contract Pulse is Ownable {
 
         //approve "tokenAmount" of tokens for the Uniswap Router to use
         _approve(address(this), address(uniswapV2Router), tokenAmount);
-
+        
         // make the swap
         uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
             tokenAmount,
@@ -670,44 +684,40 @@ contract Pulse is Ownable {
         // approve token transfer to cover all possible scenarios
         _approve(address(this), address(uniswapV2Router), tokenAmount);
 
-        uniswapV2Router.addLiquidityETH{
+        (uint256 amountToken, uint256 amountEth, ) = uniswapV2Router.addLiquidityETH{
             value: ethAmount
         }(
             address(this),
             tokenAmount,
             0, // slippage is unavoidable
             0, // slippage is unavoidable
-            address(this),
+            minterAddress,
             block.timestamp + 7 days
         );
-    }
-
-    function redeemLpTokens() public onlyOwner {
         
-        //transfer all of the lp's to the minter contract 
-        IUniswapV2Pair uniswapV2PairContract = IUniswapV2Pair(uniswapV2Pair);
-        uniswapV2PairContract.transfer(minterAddress, uniswapV2PairContract.balanceOf(address(this)));
-
-        //minter will convert all of the lp's in PULSE and return the resulted amount 
-        IPulseManager minter = IPulseManager(minterAddress);
-        uint256 tokensToBeBurned = minter.reedemLpTokensPulse(uniswapV2Pair);
-        uint256 currentRate = _getRate();
-
-        //burn the resulted amount from the minter address
-        _rOwned[minterAddress] = _rOwned[minterAddress].sub(
-            tokensToBeBurned * currentRate
-        );
-        _tOwned[minterAddress] = _tOwned[minterAddress].sub(tokensToBeBurned);
-
-        //burn the resulted pulse from liquidity removing and eth swaping from the total supplies
-        _burn(tokensToBeBurned, currentRate);
+        uint256 remainingTokens = tokenAmount.sub(amountToken);
+        uint256 remainingEth = ethAmount.sub(amountEth);
+        if(remainingTokens > 0) {
+            _transfer(address(this), minterAddress, remainingTokens);
+        }
+        if(remainingEth > 0) { 
+            payable(minterAddress).transfer(remainingEth);
+        }
     }
+
 
     //burn the resulted amount from the total supplies
-    function _burn(uint256 tokensToBeBurned, uint256 currentRate)
-        private
-        onlyOwner
+    function burn(uint256 tokensToBeBurned)
+        public
     {
+        uint256 currentRate = _getRate();
+
+        _rOwned[_msgSender()] = _rOwned[_msgSender()].sub(
+            tokensToBeBurned * currentRate
+        );
+        if(_isExcluded[_msgSender()]){
+            _tOwned[_msgSender()] = _tOwned[_msgSender()].sub(tokensToBeBurned);
+        }
         _tTotal = _tTotal.sub(tokensToBeBurned);
         _rTotal = _rTotal.sub(tokensToBeBurned * currentRate);
     }

@@ -31,12 +31,12 @@ describe("Public sale tests", function () {
         await minter.initPublicSale();
         await minter.publicSale({value: '100000000'});
         await expect(minter.publicSale({value: '100000000'})).to.be.reverted;
-    })
+    });
 
     it("Should mint 1 token", async function () {
         await minter.initPublicSale();
         await minter.setTokenPrice(bigNum(1));
         await expect(minter.publicSale({value:bigNum(1)}));
         expect(await pulse.balanceOf(deployerAccount.address)).to.equal('1000000000');
-    })
-})
+    });
+});

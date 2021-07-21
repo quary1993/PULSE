@@ -32,6 +32,7 @@ describe("Redeem LP tokens tests", function () {
     it("Should create PULSE-BNB pair, add liquidity to it and redeem the LP token's received", async function () {
         const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
         const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+        await pulse.excludeFromReward(minter.address);
         await minter.mintHalfByOwner(deployerAccount.address);
         await pulse.setReviveLaunchDomeAddress(nonExcludedAccountThird.address);
         await pulse.resumeTransactions();
@@ -41,8 +42,7 @@ describe("Redeem LP tokens tests", function () {
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, 100000000);
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, 100000000);
         const balance = await pulse.balanceOf(deployerAccount.address);
-        await pulse.redeemLpTokens();
+        await minter.reedemLpTokensPulse(2480098);
         expect(await pulse.balanceOf(deployerAccount.address)).to.equal(balance);
     });
-
 })

@@ -33,6 +33,6 @@ describe("Revive basket tokens handling tests", function () {
         await minter.addToken(pulse.address, 230);
         await minter.removeToken(pulse.address);
         expect(await minter.getTokenWeight(pulse.address)).to.equal('0');
-    })
+    });
 
-})
+});

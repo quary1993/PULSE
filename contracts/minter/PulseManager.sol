@@ -27,6 +27,8 @@ contract PulseManager is IPulseManager, Ownable {
     IUniswapV2Router02 private uniswapV2Router;
     IUniswapV2Factory private factory;
 
+    address private uniswapV2RouterAddress = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+
     struct reviveBasketToken {
         address tokenAddress;
         uint256 weight;
@@ -38,7 +40,7 @@ contract PulseManager is IPulseManager, Ownable {
     constructor() public {
         creationTime = block.timestamp;
         uniswapV2Router = IUniswapV2Router02(
-            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+            uniswapV2RouterAddress
         );
         factory = IUniswapV2Factory(uniswapV2Router.factory());
     }
@@ -55,23 +57,23 @@ contract PulseManager is IPulseManager, Ownable {
     }
 
     //converts percentage to amount from 1000000000
-    function _percentageToAmountMintedToken(uint256 percentage)
+    function _percentageToAmountMintedToken(uint256 _percentage)
         private
         pure
         returns (uint256)
     {
         uint256 amount = 10**16;
-        amount = amount.mul(percentage);
+        amount = amount.mul(_percentage);
         return amount;
     }
 
     //used to mint half of the total tokens to the owner
-    function mintHalfByOwner(address to) external onlyOwner {
+    function mintHalfByOwner(address _to) external onlyOwner {
         require(
             hasOwnerMintedHalf == false,
             "Mint: you can mint 50% of the tokens only one time!"
         );
-        pulseToken.mint(to, _percentageToAmountMintedToken(50));
+        pulseToken.mint(_to, _percentageToAmountMintedToken(50));
         hasOwnerMintedHalf = true;
     }
 
@@ -98,6 +100,7 @@ contract PulseManager is IPulseManager, Ownable {
             publicSaleMintedTokens + pulseToBeBought <= maxMintablePs,
             "Public sale: you need to buy less Pulse"
         );
+        payable(_msgSender()).transfer(bnb.mod(10**9));
         pulseToken.mint(_msgSender(), pulseToBeBought);
         publicSaleMintedTokens = publicSaleMintedTokens.add(pulseToBeBought);
     }
@@ -105,9 +108,9 @@ contract PulseManager is IPulseManager, Ownable {
     //used to redeem a specific amount of tokens after a period of months established below
     //if the max mintable amount of tokens is not claimed at the specified time, the remaining
     //amount will be able to the next reward so the owner does not need to claim all the tokens in one trance
-    function periodicMint(uint256 amountToBeMinted) external onlyOwner {
+    function periodicMint(uint256 _amountToBeMinted) external onlyOwner {
         require(
-            amountToBeMinted > 0,
+            _amountToBeMinted > 0,
             "Periodic mint: amount to be minted should be greater than 0"
         );
         uint256 month = 30 days;
@@ -149,11 +152,11 @@ contract PulseManager is IPulseManager, Ownable {
             }
         }
         require(
-            canMint >= amountToBeMinted,
+            canMint >= _amountToBeMinted,
             "Pulse: you need to mint less tokens"
         );
-        pulseToken.mint(_msgSender(), amountToBeMinted);
-        periodicMintedTokens = periodicMintedTokens.add(amountToBeMinted);
+        pulseToken.mint(_msgSender(), _amountToBeMinted);
+        periodicMintedTokens = periodicMintedTokens.add(_amountToBeMinted);
     }
 
     //returns the toal amount of minted tokens
@@ -209,13 +212,13 @@ contract PulseManager is IPulseManager, Ownable {
     }
 
     //returns the amount of eth that can be used to buy a specific token based
-    // on the total eth amount (totalBalance) and the token's weight 
-    function _getEthAmountToBeUsed(uint256 totalBalance, uint256 tokenWeight)
+    // on the total eth amount (_totalBalance) and the token's weight (_tokenWeight)
+    function _getEthAmountToBeUsed(uint256 _totalBalance, uint256 _tokenWeight)
         private
         view
         returns (uint256)
     {
-        uint256 amount = (totalBalance / 100).mul(tokenWeight.mul(100)) / reviveBasketWeight;
+        uint256 amount = (_totalBalance / 100).mul(_tokenWeight.mul(100)) / reviveBasketWeight;
         return amount;
     }
 
@@ -230,7 +233,7 @@ contract PulseManager is IPulseManager, Ownable {
         IERC20 tokenContract = IERC20(_tokenAddress);
 
         tokenContract.approve(
-            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
+            uniswapV2RouterAddress,
             _tokenAmount
         );
 
@@ -250,20 +253,20 @@ contract PulseManager is IPulseManager, Ownable {
         return address(this).balance.sub(initialBalance);
     }
 
-    //swap half of the "ethAmount" into the specified token and add liquidity to the WETH -> token
-    //pool with the remaining half of the "ethAmount"
-    function _buyToken(reviveBasketToken memory token, uint256 ethAmount)
+    //swap half of the "_ethAmount" into the specified token and add liquidity to the WETH -> token
+    //pool with the remaining half of the "_ethAmount"
+    function _buyToken(reviveBasketToken memory _token, uint256 _ethAmount)
         private
     {
-        IERC20 tokenContract = IERC20(token.tokenAddress);
+        IERC20 tokenContract = IERC20(_token.tokenAddress);
 
         // generate the uniswap pair path of WETH -> token
         address[] memory path = new address[](2);
         path[0] = uniswapV2Router.WETH();
-        path[1] = token.tokenAddress;
+        path[1] = _token.tokenAddress;
 
         //get pair address of the WETH -> token pair
-        address pairAddress = factory.getPair(uniswapV2Router.WETH(), token.tokenAddress);
+        address pairAddress = factory.getPair(uniswapV2Router.WETH(), _token.tokenAddress);
 
         //if pair don't exist
         if(pairAddress == address(0)) return;
@@ -274,18 +277,18 @@ contract PulseManager is IPulseManager, Ownable {
         // has been manually sent to the contract
         uint256 tokenAmount = tokenContract.balanceOf(address(this));
         uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
-            value: ethAmount / 2
+            value: _ethAmount / 2
         }(0, path, address(this), 10462302631);
 
         // how much "token" did we just swap into?
         tokenAmount = tokenContract.balanceOf(address(this)).sub(tokenAmount);
         tokenContract.approve(
-            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
+            uniswapV2RouterAddress,
             tokenAmount
         );
        //adds liquidity to the WETH -> token
-       uniswapV2Router.addLiquidityETH{value: ethAmount / 2}(
-            token.tokenAddress,
+       uniswapV2Router.addLiquidityETH{value: _ethAmount / 2}(
+            _token.tokenAddress,
             tokenAmount,
             0,
             0,
@@ -294,14 +297,14 @@ contract PulseManager is IPulseManager, Ownable {
         );
     }
 
-    function handleReviveBasket(uint256 pulseAmount)
+    function handleReviveBasket(uint256 _pulseAmount)
         public
         override
         returns (bool)
     {
         require(_msgSender() == pulseTokenAddress, "Revive basket: this function can only be called by PULSE Token Contract");
         //swap all the received PULSE into eth
-        uint256 ethAmount = _swapExactTokensForEth(pulseAmount, pulseTokenAddress);
+        uint256 ethAmount = _swapExactTokensForEth(_pulseAmount, pulseTokenAddress);
         for (uint256 i = 0; i < reviveBasketTokens.length; i++) {
             _buyToken(
                 reviveBasketTokens[i],
@@ -330,7 +333,7 @@ contract PulseManager is IPulseManager, Ownable {
 
         //approve the router to use all the lp's of this contract
         pair.approve(
-            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
+            uniswapV2RouterAddress,
             _lpTokens
         );
 
@@ -386,17 +389,17 @@ contract PulseManager is IPulseManager, Ownable {
         token.deliver(balance);
     }
 
-    function reedemLpTokensPulse(address ethPulsePairAddress) external override returns(uint256) {
-
-        require(_msgSender() == pulseTokenAddress, "Revive basket: this function can only be called by PULSE Token Contract");
+    function reedemLpTokensPulse(uint256 _lpTokens) external onlyOwner returns(uint256) {
+        
+        address pairAddress = factory.getPair(uniswapV2Router.WETH(), pulseTokenAddress);
 
         //get contract interafce of the uniswapV2PairToken
-        IUniswapV2Pair ethPulsePairContract = IUniswapV2Pair(ethPulsePairAddress);
+        IUniswapV2Pair ethPulsePairContract = IUniswapV2Pair(pairAddress);
 
         //approve the router to use all the LP's of this contract
         ethPulsePairContract.approve(
-            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
-            ethPulsePairContract.balanceOf(address(this))
+            uniswapV2RouterAddress,
+            _lpTokens
         );
 
         //swap all the LP's into ETH and PULSE
@@ -405,7 +408,7 @@ contract PulseManager is IPulseManager, Ownable {
         amountEth = uniswapV2Router
         .removeLiquidityETHSupportingFeeOnTransferTokens(
             pulseTokenAddress,
-            ethPulsePairContract.balanceOf(address(this)),
+            _lpTokens,
             0,
             0,
             address(this),
@@ -423,6 +426,32 @@ contract PulseManager is IPulseManager, Ownable {
 
         // how much ETH did we just swap into?
         amountPulse = pulseToken.balanceOf(address(this)).sub(amountPulse);  
-        return amountPulse; 
+        
+        IToken pulse = IToken(pulseTokenAddress);
+
+        pulse.burn(amountPulse);
+    }
+
+    function burnRemainingEth() external onlyOwner {
+         //generate the uniswap pair path of WETH -> PULSE
+        address[] memory path = new address[](2);
+        path[0] = uniswapV2Router.WETH();
+        path[1] = pulseTokenAddress;
+
+        uint256 balance = pulseToken.balanceOf(address(this));
+        
+        uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
+            value: address(this).balance
+        }(0, path, address(this), 10462302631);
+
+        balance = pulseToken.balanceOf(address(this)).sub(balance);
+
+        IToken pulse = IToken(pulseTokenAddress);
+        pulse.burn(balance);
+    }
+
+    function burnRemainingPulse() external onlyOwner { 
+        IToken pulse = IToken(pulseTokenAddress);
+        pulse.burn(pulseToken.balanceOf(address(this)));
     }
 }
