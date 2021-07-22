@@ -89,8 +89,8 @@ contract PulseManager is IPulseManager, Ownable {
 
     //used to buy tokens with eth
     function publicSale() external payable {
-        uint256 bnb = msg.value;
-        uint256 pulseToBeBought = bnb.mul(10**9) / tokenPrice;
+        uint256 eth = msg.value;
+        uint256 pulseToBeBought = eth.mul(10**9) / tokenPrice;
         uint256 maxMintablePs = _percentageToAmountMintedToken(10);
         require(
             publicSalePaused == false,
@@ -237,7 +237,7 @@ contract PulseManager is IPulseManager, Ownable {
             _tokenAmount
         );
 
-        // generate the uniswap pair path of token -> BNB
+        // generate the uniswap pair path of token -> eth
         address[] memory path = new address[](2);
         path[0] = _tokenAddress;
         path[1] = uniswapV2Router.WETH();

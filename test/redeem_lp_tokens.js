@@ -29,7 +29,7 @@ describe("Redeem LP tokens tests", function () {
         minter.setTokenPrice(1);
     });
 
-    it("Should create PULSE-BNB pair, add liquidity to it and redeem the LP token's received", async function () {
+    it("Should create PULSE-ETH pair, add liquidity to it and redeem the LP token's received", async function () {
         const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
         const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
         await minter.mintHalfByOwner(deployerAccount.address);

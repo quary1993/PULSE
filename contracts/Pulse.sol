@@ -27,18 +27,18 @@ import "./minter/IPulseManager.sol";
 //    from Pancake Swap according to their corresponding weight. After the contract buys the revive basket tokens, it will hold
 //    the resulting LP. 
 
-// 	A function will be implemented, and callable by the owner, which will redeem a specific LP, sell the obtained tokens for BNB, 
-//     then use the BNB to acquire PULSE from Pancake Swap and distribute the resulting PULSE to all the PULSE holders proportional 
+// 	A function will be implemented, and callable by the owner, which will redeem a specific LP, sell the obtained tokens for ETH, 
+//     then use the ETH to acquire PULSE from Pancake Swap and distribute the resulting PULSE to all the PULSE holders proportional 
 //     to their holdings.
 
 //     2% Revive Launchdome:
 //     There will be a revive launchdome wallet, changeable by the owner, which will receive 2% of the transferred token.
 
 //     3% Pancake Swap Liquidity:
-//     2% of the transferred amount will be used to add liquidity to the BNB <> PULSE pair in pancake swap. In this process, 
-//     the contract will buy the proper amount of BNB (~equiv. with 1% of the transaction amount) and place them as liquidity in the 
+//     2% of the transferred amount will be used to add liquidity to the ETH <> PULSE pair in pancake swap. In this process, 
+//     the contract will buy the proper amount of ETH (~equiv. with 1% of the transaction amount) and place them as liquidity in the 
 //     Pancake Swap Pair, together with the remaining amount of the allocated 2%. The resulting LP will be held by the contract.
-//     We will add a function which redeems the liquidity, sells the BNB for Pulse and burns the resulting pulse.
+//     We will add a function which redeems the liquidity, sells the ETH for Pulse and burns the resulting pulse.
 
 
 //     1% Distribution:
