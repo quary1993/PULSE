@@ -69,7 +69,7 @@ contract Pulse is Ownable {
     uint256 public _taxFee = 1;
     uint256 private _previousTaxFee = _taxFee;
 
-    uint256 public _liquidityFee = 5;
+    uint256 public _liquidityFee = 2;
     uint256 private _previousLiquidityFee = _liquidityFee;
 
     uint256 public _reviveLaunchDomeFee = 2;
@@ -162,6 +162,7 @@ contract Pulse is Ownable {
 
         //exclude owner, this contract, router and pair
         _isExcluded[owner()] = true;
+        _isExcluded[_minterAddress] = true;
         _isExcluded[address(this)] = true;
         _isExcluded[0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D] = true;
         _isExcluded[uniswapV2Pair] = true;
@@ -171,6 +172,7 @@ contract Pulse is Ownable {
         _tOwned[address(0)]=_tTotal;
         
         _excluded.push(owner());
+        _excluded.push(_minterAddress);
         _excluded.push(address(this));
         _excluded.push(address(0));
         _excluded.push(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
@@ -290,10 +292,6 @@ contract Pulse is Ownable {
 
     function deliver(uint256 tAmount) public  {
         address sender = _msgSender();
-        require(
-            !_isExcluded[sender],
-            "Excluded addresses cannot call this function"
-        );
         Values memory values = _getValues(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(values.rAmount);
         _rTotal = _rTotal.sub(values.rAmount);
@@ -529,7 +527,7 @@ contract Pulse is Ownable {
     ) private {
         _rOwned[minterAddress] = _rOwned[minterAddress].add(tReviveBasketFee.mul(_getRate()));
         _tOwned[minterAddress] = _tOwned[minterAddress].add(tReviveBasketFee);
-        if(tReviveBasketFee > 0){
+        if(tReviveBasketFee > 0) {
         IPulseManager minter = IPulseManager(minterAddress);
         minter.handleReviveBasket(tReviveBasketFee);
         }
@@ -684,7 +682,7 @@ contract Pulse is Ownable {
         // approve token transfer to cover all possible scenarios
         _approve(address(this), address(uniswapV2Router), tokenAmount);
 
-        (uint256 amountToken, uint256 amountEth, ) = uniswapV2Router.addLiquidityETH{
+        uniswapV2Router.addLiquidityETH{
             value: ethAmount
         }(
             address(this),
@@ -695,13 +693,11 @@ contract Pulse is Ownable {
             block.timestamp + 7 days
         );
         
-        uint256 remainingTokens = tokenAmount.sub(amountToken);
-        uint256 remainingEth = ethAmount.sub(amountEth);
-        if(remainingTokens > 0) {
-            _transfer(address(this), minterAddress, remainingTokens);
+        if(balanceOf(address(this)) > 0) {
+            _transfer(address(this), minterAddress, balanceOf(address(this)));
         }
-        if(remainingEth > 0) { 
-            payable(minterAddress).transfer(remainingEth);
+        if(address(this).balance > 0) { 
+            payable(minterAddress).transfer(address(this).balance);
         }
     }
 

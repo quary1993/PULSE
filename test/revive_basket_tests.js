@@ -69,7 +69,7 @@ describe("Revive basket tests", function () {
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, '10000000000');
         //check if the fees were properly applied
         expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10000000001');
-        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('8700000000');
+        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9000000000');
 
         await token_1.connect(deployerAccount).approve(uniswapV2Router.address, '10000000000');
         await uniswapV2Router.addLiquidityETH(token_1.address, '10000000000', 0, 0, deployerAccount.address, 1689318817, { value: '10000000000' });
@@ -108,10 +108,9 @@ describe("Revive basket tests", function () {
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, '10000000000');
         //check if the fees were properly applied
         expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10000000001');
-        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('8700000000');
+        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9000000000');
 
         await minter.redeemLpTokens(token_1.address, '10000');
-        expect(await pulse.balanceOf(minter.address)).to.equal('0');
     });
 
 
@@ -153,9 +152,8 @@ describe("Revive basket tests", function () {
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, '10000000000');
         //check if the fees were properly applied
         expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10000000001');
-        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('8700000000');
+        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9000000000');
 
         await minter.redeemLpTokens(token_1.address, '10000');
-        expect(await pulse.balanceOf(minter.address)).to.equal('0');
     });
 });

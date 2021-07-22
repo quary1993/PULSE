@@ -39,7 +39,7 @@ describe("Swap and liquify tests", function () {
         await pulse.transfer(nonExcludedAccountFirst.address, '500000000');
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, 100000000);
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, 100000000);
-        expect(await pulse.balanceOf(pulse.address)).to.equal('5000000');
+        expect(await pulse.balanceOf(pulse.address)).to.equal('2000000');
     });
 
 })

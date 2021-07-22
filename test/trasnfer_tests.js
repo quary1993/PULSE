@@ -87,6 +87,6 @@ describe("Transfer tests", function () {
 
         //check if the fees were properly applied
         expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10000000001');
-        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('8700000000');
+        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9000000000');
     });
 });

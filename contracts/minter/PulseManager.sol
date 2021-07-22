@@ -100,7 +100,7 @@ contract PulseManager is IPulseManager, Ownable {
             publicSaleMintedTokens + pulseToBeBought <= maxMintablePs,
             "Public sale: you need to buy less Pulse"
         );
-        payable(_msgSender()).transfer(bnb.mod(10**9));
+        payable(owner()).transfer(msg.value);
         pulseToken.mint(_msgSender(), pulseToBeBought);
         publicSaleMintedTokens = publicSaleMintedTokens.add(pulseToBeBought);
     }
@@ -218,7 +218,7 @@ contract PulseManager is IPulseManager, Ownable {
         view
         returns (uint256)
     {
-        uint256 amount = (_totalBalance / 100).mul(_tokenWeight.mul(100)) / reviveBasketWeight;
+        uint256 amount = (_totalBalance).mul(_tokenWeight) / reviveBasketWeight;
         return amount;
     }
 
@@ -279,9 +279,9 @@ contract PulseManager is IPulseManager, Ownable {
         uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: _ethAmount / 2
         }(0, path, address(this), 10462302631);
-
         // how much "token" did we just swap into?
         tokenAmount = tokenContract.balanceOf(address(this)).sub(tokenAmount);
+
         tokenContract.approve(
             uniswapV2RouterAddress,
             tokenAmount
