@@ -31,8 +31,8 @@ describe("Revive launch dome tests", function () {
 
     it("Should transfer 2% of the amount (that is being transfered) to the revive launch dome address", async function() {
         //initialize uniswapV2 router contract
-        const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
-        const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+        const UniswapV2Router = await ethers.getContractFactory("PancakeRouter");
+        const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         
         //mint half of the total amount of tokens for the owner
         await minter.mintHalfByOwner(deployerAccount.address);
@@ -56,8 +56,8 @@ describe("Revive launch dome tests", function () {
 
     it("Should leave the balance of reviveLaunchDomeAccount 0 because a transfer between one or two excluded accounts is being made", async function() {
          //initialize uniswapV2 router contract
-         const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
-         const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+         const UniswapV2Router = await ethers.getContractFactory("PancakeRouter");
+         const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
          
          //mint half of the total amount of tokens for the owner
          await minter.mintHalfByOwner(deployerAccount.address);

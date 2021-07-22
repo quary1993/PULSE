@@ -5,9 +5,9 @@ import "../openzeppelin/contracts/token/IToken.sol";
 import "../openzeppelin/contracts/libraries/Ownable.sol";
 import "../openzeppelin/contracts/libraries/SafeMath.sol";
 import "../openzeppelin/contracts/token/IERC20.sol";
-import "../uniswap/periphery/IUniswapV2Router02.sol";
-import "../uniswap/core/IUniswapV2Factory.sol";
-import "../uniswap/core/IUniswapV2Pair.sol";
+import "../pancakeswap/interfaces/IPancakeRouter02.sol";
+import "../pancakeswap/interfaces/IPancakeFactory.sol";
+import "../pancakeswap/interfaces/IPancakePair.sol";
 import "hardhat/console.sol";
 
 contract PulseManager is IPulseManager, Ownable {
@@ -24,10 +24,10 @@ contract PulseManager is IPulseManager, Ownable {
 
     address private pulseTokenAddress;
     IERC20 private pulseToken = IERC20(0x00);
-    IUniswapV2Router02 private uniswapV2Router;
-    IUniswapV2Factory private factory;
+    IPancakeRouter02 private uniswapV2Router;
+    IPancakeFactory private factory;
 
-    address private uniswapV2RouterAddress = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address private uniswapV2RouterAddress = 0xD99D1c33F9fC3444f8101754aBC46c52416550D1;
 
     struct reviveBasketToken {
         address tokenAddress;
@@ -39,10 +39,10 @@ contract PulseManager is IPulseManager, Ownable {
 
     constructor() public {
         creationTime = block.timestamp;
-        uniswapV2Router = IUniswapV2Router02(
+        uniswapV2Router = IPancakeRouter02(
             uniswapV2RouterAddress
         );
-        factory = IUniswapV2Factory(uniswapV2Router.factory());
+        factory = IPancakeFactory(uniswapV2Router.factory());
     }
 
     //used to set the address of the PULSE token
@@ -323,7 +323,7 @@ contract PulseManager is IPulseManager, Ownable {
 
         if(pairAddress == address(0)) return 0;
 
-        IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
+        IPancakePair pair = IPancakePair(pairAddress);
 
         IERC20 token = IERC20(_tokenAddress);
 
@@ -368,7 +368,7 @@ contract PulseManager is IPulseManager, Ownable {
     function redeemLpTokens(address _tokenAddress, uint256 _lpTokens) external onlyOwner {
         address pairAddress = factory.getPair(uniswapV2Router.WETH(), _tokenAddress);
         if(pairAddress == address(0)) return;
-        IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
+        IPancakePair pair = IPancakePair(pairAddress);
         require(pair.balanceOf(address(this)) >= _lpTokens, "Revive Basket: you don't have enough founds");
         
         uint256 amountEth = _convertTokenLpsIntoEth(_tokenAddress, _lpTokens);
@@ -394,7 +394,7 @@ contract PulseManager is IPulseManager, Ownable {
         address pairAddress = factory.getPair(uniswapV2Router.WETH(), pulseTokenAddress);
 
         //get contract interafce of the uniswapV2PairToken
-        IUniswapV2Pair ethPulsePairContract = IUniswapV2Pair(pairAddress);
+        IPancakePair ethPulsePairContract = IPancakePair(pairAddress);
 
         //approve the router to use all the LP's of this contract
         ethPulsePairContract.approve(

@@ -29,8 +29,8 @@ describe("Swap and liquify tests", function () {
     });
 
     it("Should create PULSE-ETH pair and add liquidity to it", async function () {
-        const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
-        const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+        const UniswapV2Router = await ethers.getContractFactory("PancakeRouter");
+        const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         await minter.mintHalfByOwner(deployerAccount.address);
         await pulse.setReviveLaunchDomeAddress(nonExcludedAccountThird.address);
         await pulse.resumeTransactions();

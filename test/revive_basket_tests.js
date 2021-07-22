@@ -46,8 +46,8 @@ describe("Revive basket tests", function () {
 
     it("Should revert because the owner doesn't have enough lp's because of the lack of liquidity", async function () {
         //initialize uniswapV2 router contract
-        const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
-        const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+        const UniswapV2Router = await ethers.getContractFactory("PancakeRouter");
+        const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
 
         //adds token_1 to the revive basket array
         await minter.addToken(token_1.address, 230);
@@ -81,8 +81,8 @@ describe("Revive basket tests", function () {
 
     it("Should reedem lp tokens generated from revive basket functionality", async function () {
         //initialize uniswapV2 router contract
-        const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
-        const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+        const UniswapV2Router = await ethers.getContractFactory("PancakeRouter");
+        const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
 
         //add liquidity for the token_1 -> eth pair
         await token_1.connect(deployerAccount).approve(uniswapV2Router.address, '10000000000');
@@ -116,8 +116,8 @@ describe("Revive basket tests", function () {
 
     it("Should reedem lp tokens generated from revive basket functionality", async function () {
         //initialize uniswapV2 router contract
-        const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
-        const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+        const UniswapV2Router = await ethers.getContractFactory("PancakeRouter");
+        const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
 
         //add liquidity for the token_1 -> eth pair
         await token_1.connect(deployerAccount).approve(uniswapV2Router.address, '10000000000');

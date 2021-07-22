@@ -48,8 +48,8 @@ describe("Transfer tests", function () {
 
     it("Should transfer 10 tokens from non excluded to excluded without taking fees", async function () {
         //initialize uniswapV2 router contract
-        const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
-        const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+        const UniswapV2Router = await ethers.getContractFactory("PancakeRouter");
+        const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         
         //mint half of the total amount of tokens for the owner
         await minter.mintHalfByOwner(deployerAccount.address);
@@ -68,8 +68,8 @@ describe("Transfer tests", function () {
 
     it("Should transfer 10 tokens from non excluded to non excluded taking fees", async function () {
         //initialize uniswapV2 router contract
-        const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
-        const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+        const UniswapV2Router = await ethers.getContractFactory("PancakeRouter");
+        const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         
         //mint half of the total amount of tokens for the owner
         await minter.mintHalfByOwner(deployerAccount.address);

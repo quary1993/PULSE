@@ -8,10 +8,10 @@ import "./openzeppelin/contracts/libraries/SafeMath.sol";
 import "./openzeppelin/contracts/libraries/Ownable.sol";
 
 //uniswap contracts
-import "./uniswap/core/IUniswapV2Factory.sol";
-import "./uniswap/core/IUniswapV2Pair.sol";
-import "./uniswap/periphery/IUniswapV2Router01.sol";
-import "./uniswap/periphery/IUniswapV2Router02.sol";
+import "./pancakeswap/interfaces/IPancakeFactory.sol";
+import "./pancakeswap/interfaces/IPancakePair.sol";
+import "./pancakeswap/interfaces/IPancakeRouter01.sol";
+import "./pancakeswap/interfaces/IPancakeRouter02.sol";
 
 //hardhat contracts
 import "hardhat/console.sol";
@@ -79,7 +79,7 @@ contract Pulse is Ownable {
     uint256 public _reviveBasketFee = 5;
     uint256 private _previousReviveBasketFee = _reviveBasketFee;
 
-    IUniswapV2Router02 public immutable uniswapV2Router;
+    IPancakeRouter02 public immutable uniswapV2Router;
     address public uniswapV2Pair;
 
     address public immutable minterAddress;
@@ -145,12 +145,12 @@ contract Pulse is Ownable {
     );
 
     constructor(uint256 _tokenPrice, address _minterAddress) public {
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
-            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+        IPancakeRouter02 _uniswapV2Router = IPancakeRouter02(
+            0xD99D1c33F9fC3444f8101754aBC46c52416550D1
         );
 
         // Create a uniswap pair for this new token
-        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
+        uniswapV2Pair = IPancakeFactory(_uniswapV2Router.factory())
         .createPair(address(this), _uniswapV2Router.WETH());
 
         // set the rest of the contract variables
@@ -164,7 +164,7 @@ contract Pulse is Ownable {
         _isExcluded[owner()] = true;
         _isExcluded[_minterAddress] = true;
         _isExcluded[address(this)] = true;
-        _isExcluded[0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D] = true;
+        _isExcluded[0xD99D1c33F9fC3444f8101754aBC46c52416550D1] = true;
         _isExcluded[uniswapV2Pair] = true;
         _isExcluded[address(0)]=true;
 
@@ -175,7 +175,7 @@ contract Pulse is Ownable {
         _excluded.push(_minterAddress);
         _excluded.push(address(this));
         _excluded.push(address(0));
-        _excluded.push(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        _excluded.push(0xD99D1c33F9fC3444f8101754aBC46c52416550D1);
         _excluded.push(uniswapV2Pair);
 
         creationTime = block.timestamp;
@@ -326,7 +326,7 @@ contract Pulse is Ownable {
     }
 
     function excludeFromReward(address account) external onlyOwner {
-        // require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 'We can not exclude Uniswap router.');
+        // require(account != 0xD99D1c33F9fC3444f8101754aBC46c52416550D1, 'We can not exclude Uniswap router.');
         require(!_isExcluded[account], "Account is already excluded");
         if (_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);

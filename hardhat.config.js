@@ -26,14 +26,24 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: "https://eth-mainnet.alchemyapi.io/v2/pU5x91s0MtTMxAn9Ml7uh_lE9j4JDHvG",
-        blockNumber: 12651413
+        url: 'https://data-seed-prebsc-2-s3.binance.org:8545/',
+        accounts: {
+          mnemonic:"test test test test test test test test test test test junk",
+          initialIndex:0,
+          path:"m/44'/60'/0'/0",
+          count:20,
+          accountsBalance:"10000000000000000000000"
+        },
+        timeout: 20000
       }
     }, 
     ropsten: {
       url: `https://rinkeby.infura.io/v3/82342931106644f3933b1c2a0818fada`,
       accounts: [`0xc9370a4a88586374e0bb178ba544cbe00a2308f4485a7269c5548b5837ae2c18`],
     },
+    bnbTest: {
+      url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
+    }
   },
   etherscan: {
     // Your API key for Etherscan

@@ -30,8 +30,8 @@ describe("Distribution tests", function () {
     });
 
     it("Should transfer 2% of the amount (that is being transfered) to the revive launch dome address", async function () {
-        const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
-        const uniswapV2Router = await UniswapV2Router.attach("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D");
+        const UniswapV2Router = await ethers.getContractFactory("PancakeRouter");
+        const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         await minter.mintHalfByOwner(deployerAccount.address);
         await pulse.resumeTransactions();
         await pulse.approve(uniswapV2Router.address, 1000000000);
