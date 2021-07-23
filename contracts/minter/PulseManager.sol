@@ -62,9 +62,10 @@ contract PulseManager is IPulseManager, Ownable {
         pure
         returns (uint256)
     {
-        uint256 amount = 10**16;
-        amount = amount.mul(_percentage);
-        return amount;
+        //maximum supply divided by 100
+        uint256 maximumSupply = 10**16;
+        maximumSupply = maximumSupply.mul(_percentage);
+        return maximumSupply;
     }
 
     //used to mint half of the total tokens to the owner

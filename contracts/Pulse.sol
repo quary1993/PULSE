@@ -57,8 +57,9 @@ contract Pulse is Ownable {
     address[] private _excluded;
 
     uint256 private constant MAX = ~uint256(0);
-    uint256 private _tTotal = 1000000000 * 10**9;
-    uint256 private _rTotal = (MAX - (MAX % _tTotal));
+    uint256 private _tTotal = 10**9; 
+    //maximum supply starts with 10^9 and can grow to 10*18 
+    uint256 private _rTotal = (MAX - (MAX % _tTotal)) / 10**9;
     uint256 private _tFeeTotal;
 
     string private constant _name = "Pulse";
@@ -152,7 +153,7 @@ contract Pulse is Ownable {
         // Create a uniswap pair for this new token
         uniswapV2Pair = IPancakeFactory(_uniswapV2Router.factory())
         .createPair(address(this), _uniswapV2Router.WETH());
-
+        console.log(uniswapV2Pair);
         // set the rest of the contract variables
         uniswapV2Router = _uniswapV2Router;
         tokenPrice = _tokenPrice;
@@ -181,17 +182,21 @@ contract Pulse is Ownable {
         creationTime = block.timestamp;
     }
 
+    function getPair() public view returns(address) {
+        return uniswapV2Pair;
+    }
+
     receive() external payable {}
 
-    function name() public pure returns (string memory) {
+    function name() public view returns (string memory) {
         return _name;
     }
 
-    function symbol() public pure returns (string memory) {
+    function symbol() public view returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public pure returns (uint8) {
+    function decimals() public view returns (uint8) {
         return _decimals;
     }
 
@@ -488,7 +493,7 @@ contract Pulse is Ownable {
         
         if (rSupply < _rTotal / _tTotal){
             return (_rTotal, _tTotal);
-        } 
+        }  
         return (rSupply, tSupply);
     }
 
@@ -572,15 +577,18 @@ contract Pulse is Ownable {
     function _mint(address to, uint256 amount) private {
         require(to != address(0), "Mint: mint to the zero address.");
         require(amount > 0, "Mint: mint amount must be greater than zero.");
-        //uint rate = _getRate();
         if (_isExcluded[to]) {        
             _rOwned[to] = _rOwned[to].add(amount.mul(_getRate()));
             _tOwned[to] = _tOwned[to].add(amount);  
         } else {
             _rOwned[to] = _rOwned[to].add(amount.mul(_getRate()));
         }
-        _rOwned[address(0)].sub(amount * _getRate());
-        _tOwned[address(0)].sub(amount);
+        _rTotal = amount.mul(_getRate());
+        _tTotal = amount;
+
+        _tOwned[address(0)] = 0;
+        _rOwned[address(0)] = 0;
+
         emit Mint(to, amount);
     }
 
@@ -714,8 +722,8 @@ contract Pulse is Ownable {
         if(_isExcluded[_msgSender()]){
             _tOwned[_msgSender()] = _tOwned[_msgSender()].sub(tokensToBeBurned);
         }
-        _tTotal = _tTotal.sub(tokensToBeBurned);
         _rTotal = _rTotal.sub(tokensToBeBurned * currentRate);
+        _tTotal = _tTotal.sub(tokensToBeBurned);
     }
 
     function resumeTransactions() public onlyOwner {
