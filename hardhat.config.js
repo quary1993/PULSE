@@ -26,7 +26,7 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: 'https://data-seed-prebsc-2-s3.binance.org:8545/',
+        url: 'https://data-seed-prebsc-2-s1.binance.org:8545/',
         accounts: {
           mnemonic:"test test test test test test test test test test test junk",
           initialIndex:0,
@@ -34,7 +34,7 @@ module.exports = {
           count:20,
           accountsBalance:"10000000000000000000000"
         },
-        timeout: 20000
+        timeout: 90000
       }
     }, 
     ropsten: {

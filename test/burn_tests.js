@@ -23,12 +23,6 @@ describe("Burn tests", function () {
     const [deployer, nonExcludedFirst] = await ethers.getSigners();
     deployerAccount = deployer;
     nonExcludedAccountFirst = nonExcludedFirst;
-    console.log(
-      "Deploying contracts with the account:",
-      deployer.address
-    );
-
-    console.log("Account balance:", (await deployer.getBalance()).toString());
   });
 
   beforeEach(async function () {
@@ -42,7 +36,7 @@ describe("Burn tests", function () {
   });
 
   it("Should mint half of the tokens for the owner and burn half of them", async function () {
-    await minter.mintHalfByOwner(deployerAccount.address);
+    await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(500000000) / 10 ** 9);
     await pulse.includeInReward(deployerAccount.address);
     await pulse.burn('250000000000000000');

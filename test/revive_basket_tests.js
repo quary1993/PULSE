@@ -54,7 +54,7 @@ describe("Revive basket tests", function () {
         expect(await minter.getTokenWeight(token_1.address)).to.equal('230');
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address);
+        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
 
         await pulse.resumeTransactions();
 
@@ -68,8 +68,8 @@ describe("Revive basket tests", function () {
         // transfer 1 token from non excluded to non exclued (fees are applied)
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, '10000000000');
         //check if the fees were properly applied
-        expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10000000001');
-        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9000000000');
+        expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10052631578');
+        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9047368421');
 
         await token_1.connect(deployerAccount).approve(uniswapV2Router.address, '10000000000');
         await uniswapV2Router.addLiquidityETH(token_1.address, '10000000000', 0, 0, deployerAccount.address, 1689318817, { value: '10000000000' });
@@ -93,7 +93,7 @@ describe("Revive basket tests", function () {
         expect(await minter.getTokenWeight(token_1.address)).to.equal('230');
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address);
+        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
 
         await pulse.resumeTransactions();
 
@@ -107,8 +107,8 @@ describe("Revive basket tests", function () {
         // transfer 1 token from non excluded to non exclued (fees are applied)
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, '10000000000');
         //check if the fees were properly applied
-        expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10000000001');
-        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9000000000');
+        expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10052631578');
+        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9047368421');
 
         await minter.redeemLpTokens(token_1.address, '10000');
     });
@@ -137,7 +137,7 @@ describe("Revive basket tests", function () {
         expect(await minter.getTokenWeight(token_2.address)).to.equal('690');
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address);
+        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
 
         await pulse.resumeTransactions();
 
@@ -151,9 +151,9 @@ describe("Revive basket tests", function () {
         // transfer 1 token from non excluded to non exclued (fees are applied)
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, '10000000000');
         //check if the fees were properly applied
-        expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10000000001');
-        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9000000000');
+        expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10052631578');
+        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9047368421');
 
-        await minter.redeemLpTokens(token_1.address, '10000');
+        await expect(minter.redeemLpTokens(token_1.address, '10000')).to.not.be.reverted;
     });
 });

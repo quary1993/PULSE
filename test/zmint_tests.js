@@ -23,12 +23,6 @@ describe("Mint tests", function () {
     const [deployer, nonExcludedFirst] = await ethers.getSigners();
     deployerAccount = deployer;
     nonExcludedAccountFirst = nonExcludedFirst;
-    console.log(
-      "Deploying contracts with the account:",
-      deployer.address
-    );
-
-    console.log("Account balance:", (await deployer.getBalance()).toString());
   });
 
   beforeEach(async function () {
@@ -58,8 +52,8 @@ describe("Mint tests", function () {
   });
 
   it("Should mint half of the tokens for the owner", async function () {
-    await minter.mintHalfByOwner(deployerAccount.address);
-    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(500000000) / 10 ** 9);
+    await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+    expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(50) / 10 ** 2);
   });
 
   it("Should revert periodic mint because date is to small", async function () {
@@ -134,4 +128,24 @@ describe("Mint tests", function () {
     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(40) / 10 ** 2);
   });
 
+
+  it("Should mint all tokens", async function() {
+    //sets token price to equal 1 bnb
+    await pulse.connect(deployerAccount).setTokenPrice(1);
+    await minter.connect(deployerAccount).setTokenPrice(1);
+
+    //mint all tokens from periodic mint in one call
+    let redeedmTime = addMonth(25);
+    await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
+    await ethers.provider.send('evm_mine');
+    await minter.periodicMint('400000000000000000');
+    expect(await pulse.balanceOf(deployerAccount.address)).to.equal('400000000000000000');
+    await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000')
+    expect(await pulse.balanceOf(deployerAccount.address)).to.equal('900000000000000000');
+    //termina testul
+    await minter.initPublicSale();
+    await minter.connect(nonExcludedAccountFirst).publicSale({value: '100000000'});
+    expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('100000000000000000');
+    expect(await minter.getMintedTokensTotal()).to.equal('1000000000000000000');
+  })
 });

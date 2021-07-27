@@ -19,7 +19,7 @@ contract PulseManager is IPulseManager, Ownable {
     bool private publicSalePaused = true;
     uint256 private publicSaleMintedTokens = 0;
 
-    bool private hasOwnerMintedHalf = false;
+    uint256 private tokensMintedByOwnerFromHalf = 0;
     uint256 private periodicMintedTokens = 0;
 
     address private pulseTokenAddress;
@@ -69,13 +69,13 @@ contract PulseManager is IPulseManager, Ownable {
     }
 
     //used to mint half of the total tokens to the owner
-    function mintHalfByOwner(address _to) external onlyOwner {
+    function mintHalfByOwner(address _to, uint256 _amount) external onlyOwner {
         require(
-            hasOwnerMintedHalf == false,
-            "Mint: you can mint 50% of the tokens only one time!"
+            _percentageToAmountMintedToken(50) >= tokensMintedByOwnerFromHalf.add(_amount),
+            "Mint: you can mint a maximum amount of 50% from total amount of tokens"
         );
-        pulseToken.mint(_to, _percentageToAmountMintedToken(50));
-        hasOwnerMintedHalf = true;
+        pulseToken.mint(_to, _amount);
+        tokensMintedByOwnerFromHalf = tokensMintedByOwnerFromHalf.add(_amount);
     }
 
     //used to make publicSale function callable
@@ -163,8 +163,7 @@ contract PulseManager is IPulseManager, Ownable {
     //returns the toal amount of minted tokens
     function getMintedTokensTotal() external view returns (uint256) {
         uint256 totalMinted = publicSaleMintedTokens.add(periodicMintedTokens);
-        if (hasOwnerMintedHalf)
-            totalMinted = totalMinted.add(_percentageToAmountMintedToken(50));
+        totalMinted = totalMinted.add(tokensMintedByOwnerFromHalf);
         return totalMinted;
     }
 
@@ -371,7 +370,6 @@ contract PulseManager is IPulseManager, Ownable {
         if(pairAddress == address(0)) return;
         IPancakePair pair = IPancakePair(pairAddress);
         require(pair.balanceOf(address(this)) >= _lpTokens, "Revive Basket: you don't have enough founds");
-        
         uint256 amountEth = _convertTokenLpsIntoEth(_tokenAddress, _lpTokens);
 
         //generate the uniswap pair path of WETH -> PULSE

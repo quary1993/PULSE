@@ -153,7 +153,6 @@ contract Pulse is Ownable {
         // Create a uniswap pair for this new token
         uniswapV2Pair = IPancakeFactory(_uniswapV2Router.factory())
         .createPair(address(this), _uniswapV2Router.WETH());
-        console.log(uniswapV2Pair);
         // set the rest of the contract variables
         uniswapV2Router = _uniswapV2Router;
         tokenPrice = _tokenPrice;
@@ -188,15 +187,15 @@ contract Pulse is Ownable {
 
     receive() external payable {}
 
-    function name() public view returns (string memory) {
+    function name() public pure returns (string memory) {
         return _name;
     }
 
-    function symbol() public view returns (string memory) {
+    function symbol() public pure returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public view returns (uint8) {
+    function decimals() public pure returns (uint8) {
         return _decimals;
     }
 
