@@ -2,9 +2,10 @@
 pragma solidity =0.6.12;
 
 import './IUniswapV2ERC20.sol';
+import '../../../openzeppelin/contracts/libraries/Ownable.sol';
 import '../../../openzeppelin/contracts/libraries/SafeMath.sol';
 
-contract UniswapV2ERC20 is IUniswapV2ERC20 {
+contract UniswapV2ERC20 is IUniswapV2ERC20, Ownable {
     using SafeMath for uint;
 
     string public override name;
@@ -68,7 +69,7 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
         emit Transfer(from, to, value);
     }
 
-    function mint(address to, uint value) public {
+    function mint(address to, uint value) public onlyOwner {
         _mint(to, value);
     }
 
