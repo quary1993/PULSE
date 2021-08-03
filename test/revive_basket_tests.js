@@ -26,11 +26,9 @@ describe("Revive basket tests", function () {
     beforeEach(async function () {
         //deploy minter
         const Minter = await ethers.getContractFactory("PulseManager");
-        minter = await Minter.deploy();
-
-        //deploy pulse
+        minter = await Minter.deploy("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         const Pulse = await ethers.getContractFactory("Pulse");
-        pulse = await Pulse.deploy(1, minter.address);
+        pulse = await Pulse.deploy(bigNum(1), minter.address, "0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         await pulse.deployed();
 
         //set minter internal variables
@@ -75,7 +73,7 @@ describe("Revive basket tests", function () {
         await uniswapV2Router.addLiquidityETH(token_1.address, '10000000000', 0, 0, deployerAccount.address, 1689318817, { value: '10000000000' });
 
         await expect(minter.redeemLpTokens(token_1.address, '10000')).to.be.reverted;
-        
+
     });
 
 
@@ -86,7 +84,7 @@ describe("Revive basket tests", function () {
 
         //add liquidity for the token_1 -> eth pair
         await token_1.connect(deployerAccount).approve(uniswapV2Router.address, '10000000000');
-        await uniswapV2Router.addLiquidityETH(token_1.address, '10000000000', 0, 0, deployerAccount.address, 1689318817, { value: '10000000000' }); 
+        await uniswapV2Router.addLiquidityETH(token_1.address, '10000000000', 0, 0, deployerAccount.address, 1689318817, { value: '10000000000' });
 
         //adds token_1 to the revive basket array
         await minter.addToken(token_1.address, 230);
@@ -121,7 +119,7 @@ describe("Revive basket tests", function () {
 
         //add liquidity for the token_1 -> eth pair
         await token_1.connect(deployerAccount).approve(uniswapV2Router.address, '10000000000');
-        await uniswapV2Router.addLiquidityETH(token_1.address, '10000000000', 0, 0, deployerAccount.address, 1689318817, { value: '10000000000' }); 
+        await uniswapV2Router.addLiquidityETH(token_1.address, '10000000000', 0, 0, deployerAccount.address, 1689318817, { value: '10000000000' });
 
         //adds token_1 to the revive basket array
         await minter.addToken(token_1.address, 230);
@@ -129,7 +127,7 @@ describe("Revive basket tests", function () {
 
         //add liquidity for the token_2 -> eth pair
         await token_1.connect(deployerAccount).approve(uniswapV2Router.address, '10000000000');
-        await uniswapV2Router.addLiquidityETH(token_1.address, '10000000000', 0, 0, deployerAccount.address, 1689318817, { value: '10000000000' }); 
+        await uniswapV2Router.addLiquidityETH(token_1.address, '10000000000', 0, 0, deployerAccount.address, 1689318817, { value: '10000000000' });
 
 
         //adds token_2 to the revive basket array

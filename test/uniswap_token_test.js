@@ -33,7 +33,7 @@ describe("Uniswap V2 ERC-2O Token Functionalities", function () {
         expect(await uniswapERC20Token.balanceOf(deployerAccount.address)).to.equal('100000000000000000000');
     });
 
-    it("Should mint 10 tokens for the secondary account", async function () { 
+    it("Should mint 10 tokens for the secondary account", async function () {
         await uniswapERC20Token.mint(secondaryAccount.address, '10000000000000000000');
         expect(await uniswapERC20Token.balanceOf(secondaryAccount.address)).to.equal('10000000000000000000');
     });

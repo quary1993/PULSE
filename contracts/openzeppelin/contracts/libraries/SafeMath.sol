@@ -35,4 +35,12 @@ library SafeMath {
         require(b > 0, "SafeMath: division with 0");
         return a % b;
     }
+
+    function div(
+        uint256 a,
+        uint256 b
+    ) internal pure returns (uint256) {
+        require(b > 0, "SafeMath: division by 0");
+        return a / b;
+    }
 }

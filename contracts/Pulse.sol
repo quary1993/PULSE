@@ -27,18 +27,18 @@ import "./minter/IPulseManager.sol";
 //    from Pancake Swap according to their corresponding weight. After the contract buys the revive basket tokens, it will hold
 //    the resulting LP. 
 
-// 	A function will be implemented, and callable by the owner, which will redeem a specific LP, sell the obtained tokens for ETH, 
-//     then use the ETH to acquire PULSE from Pancake Swap and distribute the resulting PULSE to all the PULSE holders proportional 
+// 	A function will be implemented, and callable by the owner, which will redeem a specific LP, sell the obtained tokens for BNB, 
+//     then use the BNB to acquire PULSE from Pancake Swap and distribute the resulting PULSE to all the PULSE holders proportional 
 //     to their holdings.
 
 //     2% Revive Launchdome:
 //     There will be a revive launchdome wallet, changeable by the owner, which will receive 2% of the transferred token.
 
 //     3% Pancake Swap Liquidity:
-//     2% of the transferred amount will be used to add liquidity to the ETH <> PULSE pair in pancake swap. In this process, 
-//     the contract will buy the proper amount of ETH (~equiv. with 1% of the transaction amount) and place them as liquidity in the 
+//     2% of the transferred amount will be used to add liquidity to the BNB <> PULSE pair in pancake swap. In this process, 
+//     the contract will buy the proper amount of BNB (~equiv. with 1% of the transaction amount) and place them as liquidity in the 
 //     Pancake Swap Pair, together with the remaining amount of the allocated 2%. The resulting LP will be held by the contract.
-//     We will add a function which redeems the liquidity, sells the ETH for Pulse and burns the resulting pulse.
+//     We will add a function which redeems the liquidity, sells the BNB for Pulse and burns the resulting pulse.
 
 
 //     1% Distribution:
@@ -66,6 +66,8 @@ contract Pulse is Ownable {
     string private constant _symbol = "PULSE";
     uint8 private constant _decimals = 9;
 
+    address private pancakeSwapRouterAddress = 0xD99D1c33F9fC3444f8101754aBC46c52416550D1;
+
     //declaring fee percentages 
     uint256 public _taxFee = 1;
     uint256 private _previousTaxFee = _taxFee;
@@ -80,8 +82,8 @@ contract Pulse is Ownable {
     uint256 public _reviveBasketFee = 5;
     uint256 private _previousReviveBasketFee = _reviveBasketFee;
 
-    IPancakeRouter02 public immutable uniswapV2Router;
-    address public uniswapV2Pair;
+    IPancakeRouter02 public immutable pancakeSwapRouter;
+    address public pancakeSwapPair;
 
     address public immutable minterAddress;
 
@@ -141,20 +143,32 @@ contract Pulse is Ownable {
     event SwapAndLiquifyEnabledUpdated(bool enabled);
     event SwapAndLiquify(
         uint256 tokensSwapped,
-        uint256 ethReceived,
+        uint256 bnbReceived,
         uint256 tokensIntoLiquidity
     );
+    event SetTokenPrice(address indexed user, uint256 _tokenPrice);
+    event SetReviveLaunchDomeAddress(address indexed user, address _reviveLaunchDomeAddress);
+    event ExcludeFromReward(address indexed user, address _account);
+    event IncludeInReward(address indexed user, address _account);
+    event SetTaxFeePercent(address indexed user, uint256 taxFee);
+    event SetLiquidityFeePercent(address indexed user, uint256 liquidityFee);
+    event SetReviveLaunchDomeFeePercent(address indexed user, uint256 reviveLaunchDomeFee);
+    event SetReviveBasketFeePercent(address indexed user, uint256 reviveBasketFee);
+    event SetMaxTxPercent(address indexed user, uint256 maxTxPercent);
+    event ResumeTransactions(address indexed user);
 
-    constructor(uint256 _tokenPrice, address _minterAddress) public {
-        IPancakeRouter02 _uniswapV2Router = IPancakeRouter02(
-            0xD99D1c33F9fC3444f8101754aBC46c52416550D1
+    constructor(uint256 _tokenPrice, address _minterAddress, address _pancakeSwapRouterAddress) public {
+        pancakeSwapRouterAddress = _pancakeSwapRouterAddress;
+
+        IPancakeRouter02 _pancakeSwapRouter = IPancakeRouter02(
+            _pancakeSwapRouterAddress
         );
 
         // Create a uniswap pair for this new token
-        uniswapV2Pair = IPancakeFactory(_uniswapV2Router.factory())
-        .createPair(address(this), _uniswapV2Router.WETH());
+        pancakeSwapPair = IPancakeFactory(_pancakeSwapRouter.factory())
+        .createPair(address(this), _pancakeSwapRouter.WETH());
         // set the rest of the contract variables
-        uniswapV2Router = _uniswapV2Router;
+        pancakeSwapRouter = _pancakeSwapRouter;
         tokenPrice = _tokenPrice;
 
         minterAddress = _minterAddress;
@@ -164,8 +178,8 @@ contract Pulse is Ownable {
         _isExcluded[owner()] = true;
         _isExcluded[_minterAddress] = true;
         _isExcluded[address(this)] = true;
-        _isExcluded[0xD99D1c33F9fC3444f8101754aBC46c52416550D1] = true;
-        _isExcluded[uniswapV2Pair] = true;
+        _isExcluded[pancakeSwapRouterAddress] = true;
+        _isExcluded[pancakeSwapPair] = true;
         _isExcluded[address(0)]=true;
 
         _rOwned[address(0)]=_rTotal;
@@ -175,14 +189,14 @@ contract Pulse is Ownable {
         _excluded.push(_minterAddress);
         _excluded.push(address(this));
         _excluded.push(address(0));
-        _excluded.push(0xD99D1c33F9fC3444f8101754aBC46c52416550D1);
-        _excluded.push(uniswapV2Pair);
+        _excluded.push(pancakeSwapRouterAddress);
+        _excluded.push(pancakeSwapPair);
 
         creationTime = block.timestamp;
     }
 
     function getPair() public view returns(address) {
-        return uniswapV2Pair;
+        return pancakeSwapPair;
     }
 
     receive() external payable {}
@@ -203,9 +217,10 @@ contract Pulse is Ownable {
         return _tTotal;
     }
 
-    //sets how much ETH should PULSE cost (it should be an 18 decimals number)
+    //sets how much BNB should PULSE cost (it should be an 18 decimals number)
     function setTokenPrice(uint256 _tokenPrice) public onlyOwner {
         tokenPrice = _tokenPrice;
+        emit SetTokenPrice(_msgSender(), _tokenPrice);
     }
 
     function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
@@ -218,6 +233,7 @@ contract Pulse is Ownable {
         onlyOwner
     {
         reviveLaunchDomeAddress = _reviveLaunchDomeAddress;
+        emit SetReviveLaunchDomeAddress(_msgSender(), _reviveLaunchDomeAddress);
     }
 
     function balanceOf(address account) public view returns (uint256) {
@@ -326,27 +342,29 @@ contract Pulse is Ownable {
             "Amount must be less than total reflections"
         );
         uint256 currentRate = _getRate();
-        return rAmount / currentRate;
+        return rAmount.div(currentRate);
     }
 
-    function excludeFromReward(address account) external onlyOwner {
+    function excludeFromReward(address _account) external onlyOwner {
         // require(account != 0xD99D1c33F9fC3444f8101754aBC46c52416550D1, 'We can not exclude Uniswap router.');
-        require(!_isExcluded[account], "Account is already excluded");
-        if (_rOwned[account] > 0) {
-            _tOwned[account] = tokenFromReflection(_rOwned[account]);
+        require(!_isExcluded[_account], "Account is already excluded");
+        if (_rOwned[_account] > 0) {
+            _tOwned[_account] = tokenFromReflection(_rOwned[_account]);
         }
-        _isExcluded[account] = true;
-        _excluded.push(account);
+        _isExcluded[_account] = true;
+        _excluded.push(_account);
+        emit ExcludeFromReward(_msgSender(), _account);
     }
 
-    function includeInReward(address account) external onlyOwner {
-        require(_isExcluded[account], "Account is not excluded");
+    function includeInReward(address _account) external onlyOwner {
+        require(_isExcluded[_account], "Account is not excluded");
         for (uint256 i = 0; i < _excluded.length; i++) {
-            if (_excluded[i] == account) {
-                _excluded[i] = _excluded[_excluded.length - 1];
-                _tOwned[account] = 0;
-                _isExcluded[account] = false;
+            if (_excluded[i] == _account) {
+                _excluded[i] = _excluded[_excluded.length.sub(1)];
+                _tOwned[_account] = 0;
+                _isExcluded[_account] = false;
                 _excluded.pop();
+                emit IncludeInReward(_msgSender(), _account);
                 break;
             }
         }
@@ -354,22 +372,27 @@ contract Pulse is Ownable {
 
     function setTaxFeePercent(uint256 taxFee) external checkFeeSum onlyOwner {
         _taxFee = taxFee;
+        emit SetTaxFeePercent(_msgSender(), taxFee);
     }
 
     function setLiquidityFeePercent(uint256 liquidityFee) external checkFeeSum onlyOwner {
         _liquidityFee = liquidityFee;
+        emit SetLiquidityFeePercent(_msgSender(), liquidityFee);
     }
 
     function setReviveLaunchDomeFeePercent(uint256 reviveLaunchDomeFee) external checkFeeSum onlyOwner {
         _reviveLaunchDomeFee = reviveLaunchDomeFee;
+        emit SetReviveLaunchDomeFeePercent(_msgSender(), reviveLaunchDomeFee);
     }
 
-    function setReviveBasketFeePercent(uint256 reviveBasketDomeFee) external checkFeeSum onlyOwner {
-        _reviveLaunchDomeFee = reviveBasketDomeFee;
+    function setReviveBasketFeePercent(uint256 reviveBasketFee) external checkFeeSum onlyOwner {
+        _reviveBasketFee = reviveBasketFee;
+        emit SetReviveBasketFeePercent(_msgSender(), reviveBasketFee);
     }
 
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner {
         _maxTxAmount = _tTotal.mul(maxTxPercent) / 10**2;
+        emit SetMaxTxPercent(_msgSender(), maxTxPercent);
     }
 
     function _reflectFee(uint256 rFee, uint256 tFee) private {
@@ -471,7 +494,7 @@ contract Pulse is Ownable {
 
     function _getRate() private view returns (uint256) {
         (uint256 rSupply, uint256 tSupply) = _getCurrentSupply();
-        return rSupply / tSupply;
+        return rSupply.div(tSupply);
     }
 
     function _getCurrentSupply() private view returns (uint256, uint256) {
@@ -490,7 +513,7 @@ contract Pulse is Ownable {
             tSupply = tSupply.sub(_tOwned[_excluded[i]]);
         }
         
-        if (rSupply < _rTotal / _tTotal){
+        if (rSupply < _rTotal.div(_tTotal)){
             return (_rTotal, _tTotal);
         }  
         return (rSupply, tSupply);
@@ -646,51 +669,51 @@ contract Pulse is Ownable {
 
     function _swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
         // split the contract balance into halves
-        uint256 half = contractTokenBalance / 2;
+        uint256 half = contractTokenBalance.div(2);
         uint256 otherHalf = contractTokenBalance.sub(half);
         
-        // capture the contract's current ETH balance.
-        // this is so that we can capture exactly the amount of ETH that the
-        // swap creates, and not make the liquidity event include any ETH that
+        // capture the contract's current BNB balance.
+        // this is so that we can capture exactly the amount of BNB that the
+        // swap creates, and not make the liquidity event include any BNB that
         // has been manually sent to the contract
-        uint256 initialEthBalance = address(this).balance;
+        uint256 initialBnbBalance = address(this).balance;
         uint256 initialPulseBalance  = balanceOf(address(this));
 
-        // swap tokens for ETH
-        _swapTokensForEth(half); // <- this breaks the ETH -> PULSE swap when swap+liquify is triggered
-        // how much ETH did we just swap into?
-        uint256 ethAmount = address(this).balance.sub(initialEthBalance);
+        // swap tokens for BNB
+        _swapTokensForBnb(half); // <- this breaks the BNB -> PULSE swap when swap+liquify is triggered
+        // how much BNB did we just swap into?
+        uint256 bnbAmount = address(this).balance.sub(initialBnbBalance);
         uint256 actualPulseSwapped = initialPulseBalance.sub(balanceOf(address(this)));
-        otherHalf = otherHalf.add(half - actualPulseSwapped);
-        _addLiquidity(otherHalf, ethAmount);
-        emit SwapAndLiquify(half, ethAmount, otherHalf);
+        otherHalf = otherHalf.add(half.sub(actualPulseSwapped));
+        _addLiquidity(otherHalf, bnbAmount);
+        emit SwapAndLiquify(half, bnbAmount, otherHalf);
     }
 
-    function _swapTokensForEth(uint256 tokenAmount) private {
-        // generate the uniswap pair path of token -> ETH
+    function _swapTokensForBnb(uint256 tokenAmount) private {
+        // generate the uniswap pair path of token -> Bnb
         address[] memory path = new address[](2);
         path[0] = address(this);
-        path[1] = uniswapV2Router.WETH();
+        path[1] = pancakeSwapRouter.WETH();
 
         //approve "tokenAmount" of tokens for the Uniswap Router to use
-        _approve(address(this), address(uniswapV2Router), tokenAmount);
+        _approve(address(this), address(pancakeSwapRouter), tokenAmount);
         
         // make the swap
-        uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+        pancakeSwapRouter.swapExactTokensForETHSupportingFeeOnTransferTokens(
             tokenAmount,
-            0, // accept any amount of ETH
+            0, // accept any amount of BNB
             path,
             address(this),
             block.timestamp + 7 days
         );
     }
 
-    function _addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
+    function _addLiquidity(uint256 tokenAmount, uint256 bnbAmount) private {
         // approve token transfer to cover all possible scenarios
-        _approve(address(this), address(uniswapV2Router), tokenAmount);
+        _approve(address(this), address(pancakeSwapRouter), tokenAmount);
 
-        uniswapV2Router.addLiquidityETH{
-            value: ethAmount
+        pancakeSwapRouter.addLiquidityETH{
+            value: bnbAmount
         }(
             address(this),
             tokenAmount,
@@ -703,6 +726,7 @@ contract Pulse is Ownable {
         if(balanceOf(address(this)) > 0) {
             _transfer(address(this), minterAddress, balanceOf(address(this)));
         }
+
         if(address(this).balance > 0) { 
             payable(minterAddress).transfer(address(this).balance);
         }
@@ -727,6 +751,7 @@ contract Pulse is Ownable {
 
     function resumeTransactions() public onlyOwner {
         shouldTransfer = true;
+        emit ResumeTransactions(_msgSender());
     }
 
     //this method is responsible for taking all fee, if takeFee is true

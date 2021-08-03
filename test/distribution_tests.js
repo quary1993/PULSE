@@ -21,10 +21,9 @@ describe("Distribution tests", function () {
 
     beforeEach(async function () {
         const Minter = await ethers.getContractFactory("PulseManager");
-        minter = await Minter.deploy();
+        minter = await Minter.deploy("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         const Pulse = await ethers.getContractFactory("Pulse");
-        pulse = await Pulse.deploy(bigNum(1), minter.address);
-        await pulse.deployed();
+        pulse = await Pulse.deploy(bigNum(1), minter.address, "0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         minter.setTokenAddress(pulse.address);
         minter.setTokenPrice(bigNum(1));
     });
@@ -36,7 +35,7 @@ describe("Distribution tests", function () {
         await pulse.resumeTransactions();
         await pulse.approve(uniswapV2Router.address, 1000000000);
         await uniswapV2Router.addLiquidityETH(pulse.address, 1000000000, 1, 1, deployerAccount.address, 10429362993, { value: 1000000000 });
-        
+
         const pulsePairAddress = await pulse.getPair();
 
         //transfer a part of the tokens minted previously to a non excluded account
@@ -44,14 +43,14 @@ describe("Distribution tests", function () {
 
         //transfer a part of the tokens minted previously to a non excluded account
         await pulse.transfer(nonExcludedAccountThird.address, '900000000000000');
-        
+
         // //transfer the received tokens to another non excluded account (fee are being deducted) 
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, '1000000000000000');
-        
+
         //checks if the balance of the account is bigger than 1000000000000000SA
         //that means the fees have been reflected and balances have increased
         expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('903333333333333');
         expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('903333333333333');
-        expect(await pulse.balanceOf(nonExcludedAccountThird.address)).to.equal('903333333333333');      
+        expect(await pulse.balanceOf(nonExcludedAccountThird.address)).to.equal('903333333333333');
     });
 })
