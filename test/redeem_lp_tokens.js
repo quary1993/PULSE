@@ -41,7 +41,7 @@ describe("Redeem LP tokens tests", function () {
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, 100000000);
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, 100000000);
         const balance = await pulse.balanceOf(deployerAccount.address);
-        await minter.reedemLpTokensPulse(992038);
+        await minter.redeemLpTokensPulse(992038);
         expect(await pulse.balanceOf(deployerAccount.address)).to.equal(balance);
     });
 })

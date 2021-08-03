@@ -148,8 +148,6 @@ contract Pulse is Ownable {
     );
     event SetTokenPrice(address indexed user, uint256 _tokenPrice);
     event SetReviveLaunchDomeAddress(address indexed user, address _reviveLaunchDomeAddress);
-    event ExcludeFromReward(address indexed user, address _account);
-    event IncludeInReward(address indexed user, address _account);
     event SetTaxFeePercent(address indexed user, uint256 taxFee);
     event SetLiquidityFeePercent(address indexed user, uint256 liquidityFee);
     event SetReviveLaunchDomeFeePercent(address indexed user, uint256 reviveLaunchDomeFee);
@@ -353,7 +351,6 @@ contract Pulse is Ownable {
         }
         _isExcluded[_account] = true;
         _excluded.push(_account);
-        emit ExcludeFromReward(_msgSender(), _account);
     }
 
     function includeInReward(address _account) external onlyOwner {
@@ -364,7 +361,6 @@ contract Pulse is Ownable {
                 _tOwned[_account] = 0;
                 _isExcluded[_account] = false;
                 _excluded.pop();
-                emit IncludeInReward(_msgSender(), _account);
                 break;
             }
         }

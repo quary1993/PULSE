@@ -7,6 +7,12 @@ require("@nomiclabs/hardhat-etherscan");
 const { DEPLOYER_PRIVATE_KEY, INFURA_PROJECT_ID } = process.env;
 
 module.exports = {
+  solc: {
+    optimizer: {
+      enabled: true,
+      runs: 200
+    }
+  },
   solidity: {
     compilers:[
       {
