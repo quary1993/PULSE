@@ -30,7 +30,7 @@ describe("Transfer tests", function () {
     it("Should transfer 10 tokens from excluded to excluded without taking fees", async function () {
         await pulse.excludeFromReward(nonExcludedAccountFirst.address);
         await pulse.resumeTransactions();
-        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
         await pulse.transfer(nonExcludedAccountFirst.address, '10000000000');
         expect(await pulse.balanceOf(deployerAccount.address)).to.equal("499999990000000000");
         expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10000000000');
@@ -38,7 +38,7 @@ describe("Transfer tests", function () {
 
     it("Should transfer 10 tokens from excluded to non excluded without taking fees", async function () {
         await pulse.resumeTransactions();
-        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
         expect(await pulse.balanceOf(deployerAccount.address)).to.equal("500000000000000000");
         expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('0');
         await pulse.transfer(nonExcludedAccountFirst.address, '10000000000');
@@ -52,7 +52,7 @@ describe("Transfer tests", function () {
         const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
         await pulse.resumeTransactions();
 
         //transfer 2 tokens from excluded to non excluded (no fees on the transfer)
@@ -72,7 +72,7 @@ describe("Transfer tests", function () {
         const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
         await pulse.resumeTransactions();
 
         //add liqiudity to the PULSE->ETH pair

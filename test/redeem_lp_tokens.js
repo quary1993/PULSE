@@ -32,7 +32,7 @@ describe("Redeem LP tokens tests", function () {
     it("Should create PULSE-ETH pair, add liquidity to it and redeem the LP token's received", async function () {
         const UniswapV2Router = await ethers.getContractFactory("PancakeRouter");
         const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
-        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
         await pulse.setReviveLaunchDomeAddress(nonExcludedAccountThird.address);
         await pulse.resumeTransactions();
         await pulse.approve(uniswapV2Router.address, 1000000000);

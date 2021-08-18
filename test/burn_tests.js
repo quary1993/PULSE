@@ -36,7 +36,7 @@ describe("Burn tests", function () {
   });
 
   it("Should mint half of the tokens for the owner and burn half of them", async function () {
-    await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+    await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(500000000) / 10 ** 9);
     await pulse.includeInReward(deployerAccount.address);
     await pulse.burn('250000000000000000');

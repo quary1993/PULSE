@@ -59,7 +59,7 @@ contract Pulse is Ownable {
     uint256 private constant MAX = ~uint256(0);
     uint256 private _tTotal = 10**9; 
     //maximum supply starts with 10^9 and can grow to 10*18 
-    uint256 private _rTotal = (MAX - (MAX % _tTotal)) / 10**9;
+    uint256 private _rTotal = (MAX - (MAX % 10**18)) / 10**9;
     uint256 private _tFeeTotal;
 
     string private constant _name = "Pulse";
@@ -178,15 +178,13 @@ contract Pulse is Ownable {
         _isExcluded[address(this)] = true;
         _isExcluded[pancakeSwapRouterAddress] = true;
         _isExcluded[pancakeSwapPair] = true;
-        _isExcluded[address(0)]=true;
 
-        _rOwned[address(0)]=_rTotal;
-        _tOwned[address(0)]=_tTotal;
+        _rOwned[owner()]=_rTotal;
+        _tOwned[owner()]=_tTotal;
         
         _excluded.push(owner());
         _excluded.push(_minterAddress);
         _excluded.push(address(this));
-        _excluded.push(address(0));
         _excluded.push(pancakeSwapRouterAddress);
         _excluded.push(pancakeSwapPair);
 
@@ -601,11 +599,8 @@ contract Pulse is Ownable {
         } else {
             _rOwned[to] = _rOwned[to].add(amount.mul(_getRate()));
         }
-        _rTotal = amount.mul(_getRate());
-        _tTotal = amount;
-
-        _tOwned[address(0)] = 0;
-        _rOwned[address(0)] = 0;
+        _rTotal = _rTotal.add(amount.mul(_getRate()));
+        _tTotal = _tTotal.add(amount);
 
         emit Mint(to, amount);
     }

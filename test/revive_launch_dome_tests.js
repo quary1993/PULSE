@@ -35,7 +35,7 @@ describe("Revive launch dome tests", function () {
         const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
         await pulse.resumeTransactions();
 
         //add liqiudity to the PULSE->ETH pair
@@ -60,7 +60,7 @@ describe("Revive launch dome tests", function () {
         const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
         await pulse.resumeTransactions();
 
         //add liqiudity to the PULSE->ETH pair

@@ -19,7 +19,7 @@ contract PulseManager is IPulseManager, Ownable {
     bool private publicSalePaused = true;
     uint256 private publicSaleMintedTokens = 0;
 
-    uint256 private tokensMintedByOwnerFromHalf = 0;
+    uint256 private tokensMintedByOwnerFromHalf = 1000000000;
     uint256 private periodicMintedTokens = 0;
 
     address private pulseTokenAddress;
@@ -88,7 +88,7 @@ contract PulseManager is IPulseManager, Ownable {
     //used to mint half of the total tokens to the owner
     function mintHalfByOwner(address _to, uint256 _amount) external onlyOwner {
         require(
-            _percentageToAmountMintedToken(50) >= tokensMintedByOwnerFromHalf.add(_amount),
+            _percentageToAmountMintedToken(50)  >= tokensMintedByOwnerFromHalf.add(_amount),
             "Mint: you can mint a maximum amount of 50% from total amount of tokens"
         );
         pulseToken.mint(_to, _amount);

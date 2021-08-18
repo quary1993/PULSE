@@ -52,7 +52,7 @@ describe("Revive basket tests", function () {
         expect(await minter.getTokenWeight(token_1.address)).to.equal('230');
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
 
         await pulse.resumeTransactions();
 
@@ -91,7 +91,7 @@ describe("Revive basket tests", function () {
         expect(await minter.getTokenWeight(token_1.address)).to.equal('230');
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
 
         await pulse.resumeTransactions();
 
@@ -135,7 +135,7 @@ describe("Revive basket tests", function () {
         expect(await minter.getTokenWeight(token_2.address)).to.equal('690');
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address, '500000000000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
 
         await pulse.resumeTransactions();
 
