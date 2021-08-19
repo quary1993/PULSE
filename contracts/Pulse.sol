@@ -92,7 +92,6 @@ contract Pulse is Ownable {
 
     uint256 public _maxTxAmount = 5000000 * 10**9;
 
-    uint256 tokenPrice = 20 * 10**18;
     bool shouldTransfer = false;
 
     uint256 creationTime;
@@ -146,7 +145,6 @@ contract Pulse is Ownable {
         uint256 bnbReceived,
         uint256 tokensIntoLiquidity
     );
-    event SetTokenPrice(address indexed user, uint256 _tokenPrice);
     event SetReviveLaunchDomeAddress(address indexed user, address _reviveLaunchDomeAddress);
     event SetTaxFeePercent(address indexed user, uint256 taxFee);
     event SetLiquidityFeePercent(address indexed user, uint256 liquidityFee);
@@ -155,7 +153,7 @@ contract Pulse is Ownable {
     event SetMaxTxPercent(address indexed user, uint256 maxTxPercent);
     event ResumeTransactions(address indexed user);
 
-    constructor(uint256 _tokenPrice, address _minterAddress, address _pancakeSwapRouterAddress) public {
+    constructor(address _minterAddress, address _pancakeSwapRouterAddress) public {
         pancakeSwapRouterAddress = _pancakeSwapRouterAddress;
 
         IPancakeRouter02 _pancakeSwapRouter = IPancakeRouter02(
@@ -167,7 +165,6 @@ contract Pulse is Ownable {
         .createPair(address(this), _pancakeSwapRouter.WETH());
         // set the rest of the contract variables
         pancakeSwapRouter = _pancakeSwapRouter;
-        tokenPrice = _tokenPrice;
 
         minterAddress = _minterAddress;
         reviveLaunchDomeAddress = owner();
@@ -211,12 +208,6 @@ contract Pulse is Ownable {
 
     function totalSupply() public view returns (uint256) {
         return _tTotal;
-    }
-
-    //sets how much BNB should PULSE cost (it should be an 18 decimals number)
-    function setTokenPrice(uint256 _tokenPrice) public onlyOwner {
-        tokenPrice = _tokenPrice;
-        emit SetTokenPrice(_msgSender(), _tokenPrice);
     }
 
     function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
