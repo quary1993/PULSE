@@ -21,7 +21,7 @@ describe("Transfer tests", function () {
         const Minter = await ethers.getContractFactory("PulseManager");
         minter = await Minter.deploy("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         const Pulse = await ethers.getContractFactory("Pulse");
-        pulse = await Pulse.deploy(bigNum(1), minter.address, "0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
+        pulse = await Pulse.deploy(minter.address, "0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
         await pulse.deployed();
         minter.setTokenAddress(pulse.address);
         minter.setTokenPrice(bigNum(1));
@@ -76,17 +76,16 @@ describe("Transfer tests", function () {
         await pulse.resumeTransactions();
 
         //add liqiudity to the PULSE->ETH pair
-        await pulse.approve(uniswapV2Router.address, '10000000000');
-        await uniswapV2Router.addLiquidityETH(pulse.address, '10000000000', 1, 1, deployerAccount.address, 10429362993, { value: '1000000000' });
+        await pulse.approve(uniswapV2Router.address, '30000');
+        await uniswapV2Router.addLiquidityETH(pulse.address, '30000', 1, 1, deployerAccount.address, 10429362993, { value: '3000' });
 
         //transfer 2 tokens from excluded to non excluded (no fees on the transfer)
-        await pulse.transfer(nonExcludedAccountFirst.address, '20000000000');
-
+        await pulse.includeInReward(deployerAccount.address);
         //transfer 1 token from non excluded to non exclued (fees are applied)
-        await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, '10000000000');
+        await pulse.transfer(nonExcludedAccountSecond.address, await pulse.balanceOf(deployerAccount.address));
 
         //check if the fees were properly applied
-        expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('10052631578');
-        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('9047368421');
+        expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('0');
+        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('454891304347798793');
     });
 });

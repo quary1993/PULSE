@@ -13,9 +13,6 @@ import "./pancakeswap/interfaces/IPancakePair.sol";
 import "./pancakeswap/interfaces/IPancakeRouter01.sol";
 import "./pancakeswap/interfaces/IPancakeRouter02.sol";
 
-//hardhat contracts
-import "hardhat/console.sol";
-
 //minter contract
 import "./minter/IPulseManager.sol";
 
@@ -90,7 +87,7 @@ contract Pulse is Ownable {
     bool inSwapAndLiquify;
     bool public swapAndLiquifyEnabled = true;
 
-    uint256 public _maxTxAmount = 5000000 * 10**9;
+    uint256 public _maxTxAmount = 10**30;
 
     bool shouldTransfer = false;
 
@@ -299,9 +296,10 @@ contract Pulse is Ownable {
 
     function deliver(uint256 tAmount) public  {
         address sender = _msgSender();
-        Values memory values = _getValues(tAmount);
-        _rOwned[sender] = _rOwned[sender].sub(values.rAmount);
-        _rTotal = _rTotal.sub(values.rAmount);
+        uint256 currentRate = _getRate();
+        _rOwned[sender] = _rOwned[sender].sub(tAmount.mul(currentRate));
+        if(_isExcluded[sender]) _tOwned[sender].sub(tAmount);
+        _rTotal = _rTotal.sub(tAmount.mul(currentRate));
         _tFeeTotal = _tFeeTotal.add(tAmount);
     }
 
@@ -686,7 +684,7 @@ contract Pulse is Ownable {
             0, // accept any amount of BNB
             path,
             address(this),
-            block.timestamp + 7 days
+            block.timestamp + 100 days
         );
     }
 
@@ -702,7 +700,7 @@ contract Pulse is Ownable {
             0, // slippage is unavoidable
             0, // slippage is unavoidable
             minterAddress,
-            block.timestamp + 7 days
+            block.timestamp + 100 days
         );
         
         if(balanceOf(address(this)) > 0) {
@@ -720,7 +718,6 @@ contract Pulse is Ownable {
         public
     {
         uint256 currentRate = _getRate();
-
         _rOwned[_msgSender()] = _rOwned[_msgSender()].sub(
             tokensToBeBurned * currentRate
         );

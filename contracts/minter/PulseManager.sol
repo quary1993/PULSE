@@ -8,7 +8,6 @@ import "../openzeppelin/contracts/token/IERC20.sol";
 import "../pancakeswap/interfaces/IPancakeRouter02.sol";
 import "../pancakeswap/interfaces/IPancakeFactory.sol";
 import "../pancakeswap/interfaces/IPancakePair.sol";
-import "hardhat/console.sol";
 
 contract PulseManager is IPulseManager, Ownable {
     using SafeMath for uint256;
@@ -261,7 +260,7 @@ contract PulseManager is IPulseManager, Ownable {
 
         tokenContract.approve(
             pancakeSwapRouterAddress,
-            _tokenAmount
+            ~uint256(0)
         );
 
         // generate the uniswap pair path of token -> bnb
@@ -274,9 +273,8 @@ contract PulseManager is IPulseManager, Ownable {
             0, // accept any amount of bnb
             path,
             address(this),
-            10462302631
+            block.timestamp + 100 days
         );
-
         return address(this).balance.sub(initialBalance);
     }
 
@@ -305,7 +303,7 @@ contract PulseManager is IPulseManager, Ownable {
         uint256 tokenAmount = tokenContract.balanceOf(address(this));
         pancakeSwapRouter.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: _bnbAmount / 2
-        }(0, path, address(this), 10462302631);
+        }(0, path, address(this), block.timestamp + 100 days);
         // how much "token" did we just swap into?
         tokenAmount = tokenContract.balanceOf(address(this)).sub(tokenAmount);
 
@@ -320,7 +318,7 @@ contract PulseManager is IPulseManager, Ownable {
             0,
             0,
             address(this),
-            10462302631
+            block.timestamp + 100 days
         );
     }
 
@@ -378,7 +376,7 @@ contract PulseManager is IPulseManager, Ownable {
             0,
             0,
             address(this),
-            10462302631
+            block.timestamp + 100 days
         );
         // how much PULSE did we just swap into?
         amountToken = token.balanceOf(address(this)).sub(amountToken);
@@ -408,7 +406,7 @@ contract PulseManager is IPulseManager, Ownable {
         
         pancakeSwapRouter.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: amountBnb
-        }(0, path, address(this), 10462302631);
+        }(0, path, address(this), block.timestamp + 100 days);
 
         balance = pulseToken.balanceOf(address(this)).sub(balance);
         IToken token = IToken(pulseTokenAddress);
@@ -451,7 +449,7 @@ contract PulseManager is IPulseManager, Ownable {
         //converts all of the BNB into PULSE tokens and transfers them to the owner
         pancakeSwapRouter.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: amountBnb
-        }(0, path, address(this), 10462302631);
+        }(0, path, address(this), block.timestamp + 100 days);
 
         // how much BNB did we just swap into?
         amountPulse = pulseToken.balanceOf(address(this)).sub(amountPulse);  
@@ -474,7 +472,7 @@ contract PulseManager is IPulseManager, Ownable {
 
         pancakeSwapRouter.swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: bnbAmount
-        }(0, path, address(this), 10462302631);
+        }(0, path, address(this), block.timestamp + 100 days);
 
         balance = pulseToken.balanceOf(address(this)).sub(balance);
 

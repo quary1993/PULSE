@@ -29,7 +29,7 @@ describe("Burn tests", function () {
     const Minter = await ethers.getContractFactory("PulseManager");
     minter = await Minter.deploy("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
     const Pulse = await ethers.getContractFactory("Pulse");
-    pulse = await Pulse.deploy(bigNum(1), minter.address, "0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
+    pulse = await Pulse.deploy(minter.address, "0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
     await pulse.deployed();
     minter.setTokenAddress(pulse.address);
     minter.setTokenPrice(bigNum(1));
@@ -38,9 +38,10 @@ describe("Burn tests", function () {
   it("Should mint half of the tokens for the owner and burn half of them", async function () {
     await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(500000000) / 10 ** 9);
-    await pulse.includeInReward(deployerAccount.address);
-    await pulse.burn('250000000000000000');
-    expect(await pulse.balanceOf(deployerAccount.address)).to.equal('250000000000000000');
+    await pulse.resumeTransactions();
+    await pulse.transfer(minter.address, '471733885712');
+    await minter.burnRemainingPulse();
+    //expect(await pulse.balanceOf(deployerAccount.address)).to.equal('250000000000000000');
   });
 
 });
