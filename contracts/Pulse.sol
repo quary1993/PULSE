@@ -634,8 +634,7 @@ contract Pulse is Ownable {
         if (
             !inSwapAndLiquify &&
             swapAndLiquifyEnabled &&
-            !_isExcludedFromFee[to] &&
-            !_isExcludedFromFee[from] &&
+            from != pancakeSwapPair &&
             contractTokenBalance > 0
         ) {
             _swapAndLiquify(contractTokenBalance);
