@@ -35,11 +35,11 @@ describe("Revive launch dome tests", function () {
         const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '30000000000');
         await pulse.resumeTransactions();
 
         //add liqiudity to the PULSE->ETH pair
-        await pulse.approve(uniswapV2Router.address, '10000000000');
+        await pulse.approve(uniswapV2Router.address, '30000000000');
         await uniswapV2Router.addLiquidityETH(pulse.address, '10000000000', 1, 1, deployerAccount.address, 10429362993, { value: '1000000000' });
 
         //set revive launch dome address
@@ -51,7 +51,7 @@ describe("Revive launch dome tests", function () {
         //transfer 1 token from non excluded to exclued (fees are applied)
         await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, '10000000000');
 
-        expect(await pulse.balanceOf(reviveLaunchDomeAccount.address)).to.equal('201041666');
+        expect(await pulse.balanceOf(reviveLaunchDomeAccount.address)).to.equal('200647249');
     });
 
     it("Should leave the balance of reviveLaunchDomeAccount 0 because a transfer between one or two excluded accounts is being made", async function () {

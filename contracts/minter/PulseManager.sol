@@ -8,6 +8,7 @@ import "../openzeppelin/contracts/token/IERC20.sol";
 import "../pancakeswap/interfaces/IPancakeRouter02.sol";
 import "../pancakeswap/interfaces/IPancakeFactory.sol";
 import "../pancakeswap/interfaces/IPancakePair.sol";
+import "hardhat/console.sol";
 
 contract PulseManager is IPulseManager, Ownable {
     using SafeMath for uint256;
@@ -422,6 +423,8 @@ contract PulseManager is IPulseManager, Ownable {
 
         //get contract interafce of the pancakeSwapPairToken
         IPancakePair  bnbPulsePairContract = IPancakePair(pairAddress);
+
+        console.log(bnbPulsePairContract.balanceOf(address(this)));
 
         //approve the router to use all the LP's of this contract
         bnbPulsePairContract.approve(

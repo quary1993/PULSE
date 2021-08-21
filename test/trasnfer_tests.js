@@ -72,20 +72,19 @@ describe("Transfer tests", function () {
         const uniswapV2Router = await UniswapV2Router.attach("0xD99D1c33F9fC3444f8101754aBC46c52416550D1");
 
         //mint half of the total amount of tokens for the owner
-        await minter.mintHalfByOwner(deployerAccount.address, '499999999000000000');
+        await minter.mintHalfByOwner(deployerAccount.address, '300000000');
         await pulse.resumeTransactions();
 
         //add liqiudity to the PULSE->ETH pair
-        await pulse.approve(uniswapV2Router.address, '30000');
-        await uniswapV2Router.addLiquidityETH(pulse.address, '30000', 1, 1, deployerAccount.address, 10429362993, { value: '3000' });
+        await pulse.approve(uniswapV2Router.address, '300000000');
+        await uniswapV2Router.addLiquidityETH(pulse.address, '300000000', 1, 1, deployerAccount.address, 10429362993, { value: '3000' });
 
-        //transfer 2 tokens from excluded to non excluded (no fees on the transfer)
-        await pulse.includeInReward(deployerAccount.address);
         //transfer 1 token from non excluded to non exclued (fees are applied)
-        await pulse.transfer(nonExcludedAccountSecond.address, await pulse.balanceOf(deployerAccount.address));
+        await pulse.transfer(nonExcludedAccountFirst.address, await pulse.balanceOf(deployerAccount.address));
+        await pulse.connect(nonExcludedAccountFirst).transfer(nonExcludedAccountSecond.address, 1000000000);
 
         //check if the fees were properly applied
         expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('0');
-        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('454891304347798793');
+        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('906976744');
     });
 });

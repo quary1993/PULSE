@@ -171,6 +171,7 @@ contract Pulse is Ownable {
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[_minterAddress] = true;
         _isExcludedFromFee[address(this)] = true;
+        _isExcludedFromFee[_pancakeSwapRouterAddress] = true;
 
         _rOwned[owner()]=_rTotal;
         _tOwned[owner()]=_tTotal;
