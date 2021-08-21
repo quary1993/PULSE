@@ -51,6 +51,7 @@ contract Pulse is Ownable {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     mapping(address => bool) private _isExcluded;
+    mapping(address => bool) private _isExcludedFromFee;
     address[] private _excluded;
 
     uint256 private constant MAX = ~uint256(0);
@@ -167,20 +168,12 @@ contract Pulse is Ownable {
         reviveLaunchDomeAddress = owner();
 
         //exclude owner, this contract, router and pair
-        _isExcluded[owner()] = true;
-        _isExcluded[_minterAddress] = true;
-        _isExcluded[address(this)] = true;
-        _isExcluded[pancakeSwapRouterAddress] = true;
-        _isExcluded[pancakeSwapPair] = true;
+        _isExcludedFromFee[owner()] = true;
+        _isExcludedFromFee[_minterAddress] = true;
+        _isExcludedFromFee[address(this)] = true;
 
         _rOwned[owner()]=_rTotal;
         _tOwned[owner()]=_tTotal;
-        
-        _excluded.push(owner());
-        _excluded.push(_minterAddress);
-        _excluded.push(address(this));
-        _excluded.push(pancakeSwapRouterAddress);
-        _excluded.push(pancakeSwapPair);
 
         creationTime = block.timestamp;
     }
@@ -295,10 +288,10 @@ contract Pulse is Ownable {
     }
 
     function deliver(uint256 tAmount) public  {
+        require(!_isExcluded[_msgSender()], "Sender is excluded!");
         address sender = _msgSender();
         uint256 currentRate = _getRate();
         _rOwned[sender] = _rOwned[sender].sub(tAmount.mul(currentRate));
-        if(_isExcluded[sender]) _tOwned[sender].sub(tAmount);
         _rTotal = _rTotal.sub(tAmount.mul(currentRate));
         _tFeeTotal = _tFeeTotal.add(tAmount);
     }
@@ -351,6 +344,17 @@ contract Pulse is Ownable {
                 break;
             }
         }
+    }
+
+    function excludeFromFee(address _account) external onlyOwner {
+        // require(account != 0xD99D1c33F9fC3444f8101754aBC46c52416550D1, 'We can not exclude Uniswap router.');
+        require(!_isExcludedFromFee[_account], "Account is already excluded");
+        _isExcludedFromFee[_account] = true;
+    }
+
+    function includeInFee(address _account) external onlyOwner {
+        require(_isExcluded[_account], "Account is not excluded");
+        _isExcludedFromFee[_account] = false;
     }
 
     function setTaxFeePercent(uint256 taxFee) external checkFeeSum onlyOwner {
@@ -629,8 +633,8 @@ contract Pulse is Ownable {
         if (
             !inSwapAndLiquify &&
             swapAndLiquifyEnabled &&
-            !_isExcluded[to] &&
-            !_isExcluded[from] &&
+            !_isExcludedFromFee[to] &&
+            !_isExcludedFromFee[from] &&
             contractTokenBalance > 0
         ) {
             _swapAndLiquify(contractTokenBalance);
@@ -640,7 +644,7 @@ contract Pulse is Ownable {
         bool takeFee = true;
 
         //if any account belongs to _isExcluded account then remove the fee
-        if (_isExcluded[from] || _isExcluded[to]) {
+        if (_isExcludedFromFee[from] || _isExcludedFromFee[to]) {
             takeFee = false;
         }
         //transfer amount, it will take tax, burn, liquidity, revive launch dome, revive basket fee

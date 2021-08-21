@@ -49,8 +49,8 @@ describe("Distribution tests", function () {
 
         //checks if the balance of the account is bigger than 1000000000000000
         //that means the fees have been reflected and balances have increased
-        expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('903333333333333');
-        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('903333333333333');
-        expect(await pulse.balanceOf(nonExcludedAccountThird.address)).to.equal('903333333333333');
+        expect(await pulse.balanceOf(nonExcludedAccountFirst.address)).to.equal('900018000360007');
+        expect(await pulse.balanceOf(nonExcludedAccountSecond.address)).to.equal('900018000360007');
+        expect(await pulse.balanceOf(nonExcludedAccountThird.address)).to.equal('900018000360007');
     });
 })
