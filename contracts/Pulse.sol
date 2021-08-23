@@ -50,8 +50,8 @@ contract Pulse is Ownable {
     mapping(address => uint256) private _tOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    mapping(address => bool) private _isExcluded;
-    mapping(address => bool) private _isExcludedFromFee;
+    mapping(address => bool) public isExcluded;
+    mapping(address => bool) public isExcludedFromFee;
     address[] private _excluded;
 
     uint256 private constant MAX = ~uint256(0);
@@ -144,12 +144,12 @@ contract Pulse is Ownable {
         uint256 tokensIntoLiquidity
     );
     event SetReviveLaunchDomeAddress(address indexed user, address _reviveLaunchDomeAddress);
-    event SetTaxFeePercent(address indexed user, uint256 taxFee);
-    event SetLiquidityFeePercent(address indexed user, uint256 liquidityFee);
-    event SetReviveLaunchDomeFeePercent(address indexed user, uint256 reviveLaunchDomeFee);
-    event SetReviveBasketFeePercent(address indexed user, uint256 reviveBasketFee);
+    // event SetTaxFeePercent(address indexed user, uint256 taxFee);
+    // event SetLiquidityFeePercent(address indexed user, uint256 liquidityFee);
+    // event SetReviveLaunchDomeFeePercent(address indexed user, uint256 reviveLaunchDomeFee);
+    // event SetReviveBasketFeePercent(address indexed user, uint256 reviveBasketFee);
     event SetMaxTxPercent(address indexed user, uint256 maxTxPercent);
-    event ResumeTransactions(address indexed user);
+    //event ResumeTransactions(address indexed user);
 
     constructor(address _minterAddress, address _pancakeSwapRouterAddress) public {
         pancakeSwapRouterAddress = _pancakeSwapRouterAddress;
@@ -168,10 +168,10 @@ contract Pulse is Ownable {
         reviveLaunchDomeAddress = owner();
 
         //exclude owner, this contract, router and pair
-        _isExcludedFromFee[owner()] = true;
-        _isExcludedFromFee[_minterAddress] = true;
-        _isExcludedFromFee[address(this)] = true;
-        _isExcludedFromFee[_pancakeSwapRouterAddress] = true;
+        isExcludedFromFee[owner()] = true;
+        isExcludedFromFee[_minterAddress] = true;
+        isExcludedFromFee[address(this)] = true;
+        isExcludedFromFee[pancakeSwapRouterAddress] = true;
 
         _rOwned[owner()]=_rTotal;
         _tOwned[owner()]=_tTotal;
@@ -215,7 +215,7 @@ contract Pulse is Ownable {
     }
 
     function balanceOf(address account) public view returns (uint256) {
-        if (_isExcluded[account]) return _tOwned[account];
+        if (isExcluded[account]) return _tOwned[account];
         return tokenFromReflection(_rOwned[account]);
     }
 
@@ -289,7 +289,7 @@ contract Pulse is Ownable {
     }
 
     function deliver(uint256 tAmount) public  {
-        require(!_isExcluded[_msgSender()], "Sender is excluded!");
+        require(!isExcluded[_msgSender()], "Sender is excluded!");
         address sender = _msgSender();
         uint256 currentRate = _getRate();
         _rOwned[sender] = _rOwned[sender].sub(tAmount.mul(currentRate));
@@ -326,21 +326,21 @@ contract Pulse is Ownable {
 
     function excludeFromReward(address _account) external onlyOwner {
         // require(account != 0xD99D1c33F9fC3444f8101754aBC46c52416550D1, 'We can not exclude Uniswap router.');
-        require(!_isExcluded[_account], "Account is already excluded");
+        require(!isExcluded[_account], "Account is already excluded");
         if (_rOwned[_account] > 0) {
             _tOwned[_account] = tokenFromReflection(_rOwned[_account]);
         }
-        _isExcluded[_account] = true;
+        isExcluded[_account] = true;
         _excluded.push(_account);
     }
 
     function includeInReward(address _account) external onlyOwner {
-        require(_isExcluded[_account], "Account is not excluded");
+        require(isExcluded[_account], "Account is not excluded");
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == _account) {
                 _excluded[i] = _excluded[_excluded.length.sub(1)];
                 _tOwned[_account] = 0;
-                _isExcluded[_account] = false;
+                isExcluded[_account] = false;
                 _excluded.pop();
                 break;
             }
@@ -348,34 +348,32 @@ contract Pulse is Ownable {
     }
 
     function excludeFromFee(address _account) external onlyOwner {
-        // require(account != 0xD99D1c33F9fC3444f8101754aBC46c52416550D1, 'We can not exclude Uniswap router.');
-        require(!_isExcludedFromFee[_account], "Account is already excluded");
-        _isExcludedFromFee[_account] = true;
+        // require(account != 0xD99D1c33F9fC3444f8101754aBC46c52416550D1, 'We can not exclude Uniswap router.');        
+        isExcludedFromFee[_account] = true;
     }
 
     function includeInFee(address _account) external onlyOwner {
-        require(_isExcluded[_account], "Account is not excluded");
-        _isExcludedFromFee[_account] = false;
+        isExcludedFromFee[_account] = false;
     }
 
     function setTaxFeePercent(uint256 taxFee) external checkFeeSum onlyOwner {
         _taxFee = taxFee;
-        emit SetTaxFeePercent(_msgSender(), taxFee);
+        //emit SetTaxFeePercent(_msgSender(), taxFee);
     }
 
     function setLiquidityFeePercent(uint256 liquidityFee) external checkFeeSum onlyOwner {
         _liquidityFee = liquidityFee;
-        emit SetLiquidityFeePercent(_msgSender(), liquidityFee);
+        //emit SetLiquidityFeePercent(_msgSender(), liquidityFee);
     }
 
     function setReviveLaunchDomeFeePercent(uint256 reviveLaunchDomeFee) external checkFeeSum onlyOwner {
         _reviveLaunchDomeFee = reviveLaunchDomeFee;
-        emit SetReviveLaunchDomeFeePercent(_msgSender(), reviveLaunchDomeFee);
+        //emit SetReviveLaunchDomeFeePercent(_msgSender(), reviveLaunchDomeFee);
     }
 
     function setReviveBasketFeePercent(uint256 reviveBasketFee) external checkFeeSum onlyOwner {
         _reviveBasketFee = reviveBasketFee;
-        emit SetReviveBasketFeePercent(_msgSender(), reviveBasketFee);
+        //emit SetReviveBasketFeePercent(_msgSender(), reviveBasketFee);
     }
 
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner {
@@ -513,7 +511,7 @@ contract Pulse is Ownable {
     
     function _takeLiquidity(uint256 tLiquidity) private {
         _rOwned[address(this)] = _rOwned[address(this)].add(tLiquidity.mul(_getRate()));
-        if (_isExcluded[address(this)])
+        if (isExcluded[address(this)])
             _tOwned[address(this)] = _tOwned[address(this)].add(tLiquidity);
     }
 
@@ -527,7 +525,7 @@ contract Pulse is Ownable {
         _rOwned[reviveLaunchDomeAddress] = _rOwned[reviveLaunchDomeAddress].add(
             tReviveLaunchDomeFee.mul(_getRate())
         );
-        if (_isExcluded[reviveLaunchDomeAddress]) {
+        if (isExcluded[reviveLaunchDomeAddress]) {
             _tOwned[reviveLaunchDomeAddress] = _tOwned[reviveLaunchDomeAddress]
             .add(tReviveLaunchDomeFee);
         }
@@ -541,7 +539,9 @@ contract Pulse is Ownable {
         uint256 tReviveBasketFee
     ) private {
         _rOwned[minterAddress] = _rOwned[minterAddress].add(tReviveBasketFee.mul(_getRate()));
-        _tOwned[minterAddress] = _tOwned[minterAddress].add(tReviveBasketFee);
+        if(isExcluded[minterAddress]){
+             _tOwned[minterAddress] = _tOwned[minterAddress].add(tReviveBasketFee);
+        }
         if(tReviveBasketFee > 0) {
         IPulseManager minter = IPulseManager(minterAddress);
         minter.handleReviveBasket(tReviveBasketFee);
@@ -587,7 +587,7 @@ contract Pulse is Ownable {
     function _mint(address to, uint256 amount) private {
         require(to != address(0), "Mint: mint to the zero address.");
         require(amount > 0, "Mint: mint amount must be greater than zero.");
-        if (_isExcluded[to]) {        
+        if (isExcluded[to]) {        
             _rOwned[to] = _rOwned[to].add(amount.mul(_getRate()));
             _tOwned[to] = _tOwned[to].add(amount);  
         } else {
@@ -635,16 +635,19 @@ contract Pulse is Ownable {
             !inSwapAndLiquify &&
             swapAndLiquifyEnabled &&
             from != pancakeSwapPair &&
+            to != pancakeSwapPair &&
+            from != minterAddress &&
+            to != minterAddress &&
             contractTokenBalance > 0
-        ) {
-            _swapAndLiquify(contractTokenBalance);
+        ) {            
+            _swapAndLiquify(contractTokenBalance);           
         }
 
         //indicates if fee should be deducted from transfer
         bool takeFee = true;
 
-        //if any account belongs to _isExcluded account then remove the fee
-        if (_isExcludedFromFee[from] || _isExcludedFromFee[to]) {
+        //if any account belongs to isExcluded account then remove the fee
+        if (isExcludedFromFee[from] || isExcludedFromFee[to]) {
             takeFee = false;
         }
         //transfer amount, it will take tax, burn, liquidity, revive launch dome, revive basket fee
@@ -652,70 +655,22 @@ contract Pulse is Ownable {
     }
 
     function _swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
-        // split the contract balance into halves
-        uint256 half = contractTokenBalance.div(2);
-        uint256 otherHalf = contractTokenBalance.sub(half);
-        
-        // capture the contract's current BNB balance.
-        // this is so that we can capture exactly the amount of BNB that the
-        // swap creates, and not make the liquidity event include any BNB that
-        // has been manually sent to the contract
-        uint256 initialBnbBalance = address(this).balance;
-        uint256 initialPulseBalance  = balanceOf(address(this));
 
-        // swap tokens for BNB
-        _swapTokensForBnb(half); // <- this breaks the BNB -> PULSE swap when swap+liquify is triggered
-        // how much BNB did we just swap into?
-        uint256 bnbAmount = address(this).balance.sub(initialBnbBalance);
-        uint256 actualPulseSwapped = initialPulseBalance.sub(balanceOf(address(this)));
-        otherHalf = otherHalf.add(half.sub(actualPulseSwapped));
-        _addLiquidity(otherHalf, bnbAmount);
-        emit SwapAndLiquify(half, bnbAmount, otherHalf);
-    }
-
-    function _swapTokensForBnb(uint256 tokenAmount) private {
-        // generate the uniswap pair path of token -> Bnb
-        address[] memory path = new address[](2);
-        path[0] = address(this);
-        path[1] = pancakeSwapRouter.WETH();
-
-        //approve "tokenAmount" of tokens for the Uniswap Router to use
-        _approve(address(this), address(pancakeSwapRouter), tokenAmount);
-        
-        // make the swap
-        pancakeSwapRouter.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            tokenAmount,
-            0, // accept any amount of BNB
-            path,
-            address(this),
-            block.timestamp + 100 days
-        );
-    }
-
-    function _addLiquidity(uint256 tokenAmount, uint256 bnbAmount) private {
-        // approve token transfer to cover all possible scenarios
-        _approve(address(this), address(pancakeSwapRouter), tokenAmount);
-
-        pancakeSwapRouter.addLiquidityETH{
-            value: bnbAmount
-        }(
-            address(this),
-            tokenAmount,
-            0, // slippage is unavoidable
-            0, // slippage is unavoidable
-            minterAddress,
-            block.timestamp + 100 days
-        );
-        
-        if(balanceOf(address(this)) > 0) {
-            _transfer(address(this), minterAddress, balanceOf(address(this)));
+        _rOwned[minterAddress] = _rOwned[minterAddress].add(contractTokenBalance.mul(_getRate()));
+        if(isExcluded[minterAddress]){
+             _tOwned[minterAddress] = _tOwned[minterAddress].add(contractTokenBalance);
         }
 
-        if(address(this).balance > 0) { 
-            payable(minterAddress).transfer(address(this).balance);
+        _rOwned[address(this)] = _rOwned[address(this)].sub(contractTokenBalance.mul(_getRate()));
+        if(isExcluded[address(this)]){
+             _tOwned[address(this)] = _tOwned[address(this)].sub(contractTokenBalance);
         }
-    }
 
+
+        IPulseManager minter = IPulseManager(minterAddress);
+        minter.swapAndLiquify(contractTokenBalance);
+        
+    }
 
     //burn the resulted amount from the total supplies
     function burn(uint256 tokensToBeBurned)
@@ -725,7 +680,7 @@ contract Pulse is Ownable {
         _rOwned[_msgSender()] = _rOwned[_msgSender()].sub(
             tokensToBeBurned * currentRate
         );
-        if(_isExcluded[_msgSender()]){
+        if(isExcluded[_msgSender()]){
             _tOwned[_msgSender()] = _tOwned[_msgSender()].sub(tokensToBeBurned);
         }
         _rTotal = _rTotal.sub(tokensToBeBurned * currentRate);
@@ -734,7 +689,7 @@ contract Pulse is Ownable {
 
     function resumeTransactions() public onlyOwner {
         shouldTransfer = true;
-        emit ResumeTransactions(_msgSender());
+        //emit ResumeTransactions(_msgSender());
     }
 
     //this method is responsible for taking all fee, if takeFee is true
@@ -746,23 +701,16 @@ contract Pulse is Ownable {
     ) private {
         if (!takeFee) _removeAllFee();
         Values memory values = _getValues(amount);
-        if (_isExcluded[sender] && !_isExcluded[recipient]) {
+
+        _rOwned[sender] = _rOwned[sender].sub(values.rAmount);
+        _rOwned[recipient] = _rOwned[recipient].add(values.rTransferAmount);
+        if(isExcluded[sender]){
             _tOwned[sender] = _tOwned[sender].sub(amount);
-            _rOwned[sender] = _rOwned[sender].sub(values.rAmount);
-            _rOwned[recipient] = _rOwned[recipient].add(values.rTransferAmount);
-        } else if (!_isExcluded[sender] && _isExcluded[recipient]) {
-            _rOwned[sender] = _rOwned[sender].sub(values.rAmount);
-            _tOwned[recipient] = _tOwned[recipient].add(values.tTransferAmount);
-            _rOwned[recipient] = _rOwned[recipient].add(values.rTransferAmount);
-        } else if (_isExcluded[sender] && _isExcluded[recipient]) {
-            _tOwned[sender] = _tOwned[sender].sub(amount);
-            _rOwned[sender] = _rOwned[sender].sub(values.rAmount);
-            _tOwned[recipient] = _tOwned[recipient].add(values.tTransferAmount);
-            _rOwned[recipient] = _rOwned[recipient].add(values.rTransferAmount);
-        } else {
-            _rOwned[sender] = _rOwned[sender].sub(values.rAmount);
-            _rOwned[recipient] = _rOwned[recipient].add(values.rTransferAmount);
         }
+        if(isExcluded[recipient]){
+            _tOwned[recipient] = _tOwned[recipient].add(values.tTransferAmount);
+        }
+        
         //handle fees
         _takeLiquidity(values.tLiquidity);
         _takeReviveLaunchDomeFee(

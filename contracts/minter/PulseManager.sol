@@ -424,19 +424,17 @@ contract PulseManager is IPulseManager, Ownable {
         //get contract interafce of the pancakeSwapPairToken
         IPancakePair  bnbPulsePairContract = IPancakePair(pairAddress);
 
-        console.log(bnbPulsePairContract.balanceOf(address(this)));
-
         //approve the router to use all the LP's of this contract
         bnbPulsePairContract.approve(
             pancakeSwapRouterAddress,
             _lpTokens
         );
-
+        console.log(bnbPulsePairContract.balanceOf(address(this)),_lpTokens);
         //swap all the LP's into BNB and PULSE
         uint256 amountBnb;
         uint256 amountPulse = pulseToken.balanceOf(address(this));
-        amountBnb = pancakeSwapRouter
-        .removeLiquidityETHSupportingFeeOnTransferTokens(
+        (,amountBnb) = pancakeSwapRouter
+        .removeLiquidityETH(
             pulseTokenAddress,
             _lpTokens,
             0,
@@ -464,30 +462,95 @@ contract PulseManager is IPulseManager, Ownable {
         emit RedeemLpTokensPulse(_msgSender(), _lpTokens);
     }
 
-    function burnRemainingEth() external onlyOwner {
-         //generate the uniswap pair path of BNB -> PULSE
-        address[] memory path = new address[](2);
-        path[0] = pancakeSwapRouter.WETH();
-        path[1] = pulseTokenAddress;
+    // function burnRemainingEth() external onlyOwner {
+    //      //generate the uniswap pair path of BNB -> PULSE
+    //     address[] memory path = new address[](2);
+    //     path[0] = pancakeSwapRouter.WETH();
+    //     path[1] = pulseTokenAddress;
 
-        uint256 balance = pulseToken.balanceOf(address(this));
-        uint256 bnbAmount = address(this).balance;
+    //     uint256 balance = pulseToken.balanceOf(address(this));
+    //     uint256 bnbAmount = address(this).balance;
 
-        pancakeSwapRouter.swapExactETHForTokensSupportingFeeOnTransferTokens{
-            value: bnbAmount
-        }(0, path, address(this), block.timestamp + 100 days);
+    //     pancakeSwapRouter.swapExactETHForTokensSupportingFeeOnTransferTokens{
+    //         value: bnbAmount
+    //     }(0, path, address(this), block.timestamp + 100 days);
 
-        balance = pulseToken.balanceOf(address(this)).sub(balance);
+    //     balance = pulseToken.balanceOf(address(this)).sub(balance);
 
-        IToken pulse = IToken(pulseTokenAddress);
-        pulse.burn(balance);
-        emit BurnRemainingBNB(_msgSender(), bnbAmount);
-    }
+    //     IToken pulse = IToken(pulseTokenAddress);
+    //     pulse.burn(balance);
+    //     emit BurnRemainingBNB(_msgSender(), bnbAmount);
+    // }
 
     function burnRemainingPulse() external onlyOwner { 
         IToken pulse = IToken(pulseTokenAddress);
         uint256 pulseAmount = pulseToken.balanceOf(address(this));
         pulse.burn(pulseAmount);
         emit BurnRemainingPulse(_msgSender(), pulseAmount);
+    }
+
+    function swapAndLiquify(uint256 pulseAmount) external override{
+        require(_msgSender() == pulseTokenAddress, "Revive basket: this function can only be called by PULSE Token Contract");
+        // split the contract balance into halves
+        uint256 half = pulseAmount.div(2);
+        uint256 otherHalf = pulseAmount.sub(half);
+        
+        // capture the contract's current BNB balance.
+        // this is so that we can capture exactly the amount of BNB that the
+        // swap creates, and not make the liquidity event include any BNB that
+        // has been manually sent to the contract
+        uint256 initialBnbBalance = address(this).balance;
+        uint256 initialPulseBalance  = pulseToken.balanceOf(address(this));
+
+        // swap tokens for BNB
+        _swapTokensForBnb(half); // <- this breaks the BNB -> PULSE swap when swap+liquify is triggered
+        // how much BNB did we just swap into?
+        uint256 bnbAmount = address(this).balance.sub(initialBnbBalance);
+        uint256 actualPulseSwapped = initialPulseBalance.sub(pulseToken.balanceOf(address(this)));
+        otherHalf = otherHalf.add(half.sub(actualPulseSwapped));
+        _addLiquidity(otherHalf, bnbAmount);        
+    }
+
+    function _swapTokensForBnb(uint256 tokenAmount) private {
+        // generate the uniswap pair path of token -> Bnb
+        address[] memory path = new address[](2);
+        path[0] = pulseTokenAddress;
+        path[1] = pancakeSwapRouter.WETH();
+
+        //approve "tokenAmount" of tokens for the Uniswap Router to use
+        pulseToken.approve(address(pancakeSwapRouter), tokenAmount);
+        
+        // make the swap
+        pancakeSwapRouter.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            tokenAmount,
+            0, // accept any amount of BNB
+            path,
+            address(this),
+            block.timestamp + 100 days
+        );
+    }
+
+    function _addLiquidity(uint256 tokenAmount, uint256 bnbAmount) private {
+        // approve token transfer to cover all possible scenarios
+        pulseToken.approve(address(pancakeSwapRouter), tokenAmount);
+
+        pancakeSwapRouter.addLiquidityETH{
+            value: bnbAmount
+        }(
+            pulseTokenAddress,
+            tokenAmount,
+            0, // slippage is unavoidable
+            0, // slippage is unavoidable
+            address(this),
+            block.timestamp + 100 days
+        );
+        
+        // if(balanceOf(address(this)) > 0) {
+        //     _transfer(address(this), minterAddress, balanceOf(address(this)));
+        // }
+
+        // if(address(this).balance > 0) { 
+        //     payable(minterAddress).transfer(address(this).balance);
+        // }
     }
 }

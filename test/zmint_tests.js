@@ -56,7 +56,7 @@ describe("Mint tests", function () {
     expect(parseInt(await pulse.balanceOf(deployerAccount.address))).to.equal(bigNum(50) / 10 ** 2);
   });
 
-  it("Should revert periodic mint because date is to small", async function () {
+  it("Should revert periodic mint because date is too small", async function () {
     let redeedmTime = addMonth(3);
     await ethers.provider.send('evm_setNextBlockTimestamp', [redeedmTime]);
     await ethers.provider.send('evm_mine');
